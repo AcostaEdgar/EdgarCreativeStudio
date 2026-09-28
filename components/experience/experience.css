@@ -156,6 +156,27 @@
   touch-action: pan-y;
   outline-offset: -6px !important;
 }
+.home-cursor {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  mix-blend-mode: difference;
+}
+@media (hover: hover) and (pointer: fine) {
+  .experience,
+  .experience a,
+  .experience button {
+    cursor: none;
+  }
+}
+@media (prefers-reduced-motion: reduce), (hover: none), (pointer: coarse) {
+  .home-cursor {
+    display: none;
+  }
+}
 .world-scene:active {
   cursor: grabbing;
 }
