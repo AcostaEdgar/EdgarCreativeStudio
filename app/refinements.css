@@ -28,12 +28,14 @@
 @media(prefers-reduced-motion:reduce){.studio-menu-dialog[open]{animation:none}.studio-menu-links a,.studio-menu-links svg,.studio-practice-grid article{transition:none}}
 /* Route styles are loaded after layout CSS; keep the mobile composition authoritative. */
 @media(max-width:700px){
- body .experience .experience-nav nav>a,body .portfolio-world .experience-nav nav>a{display:none}
+ body .experience .experience-nav>nav>a,body .portfolio-world .experience-nav>nav>a{display:none}
+ body .studio-menu-dialog .studio-menu-links>a{display:flex}
  body .experience .experience-title{top:29%}
  body .experience .experience-side{bottom:24%;max-width:none}
  body .experience .scene-caption{left:22px;right:auto;bottom:11%;max-width:none;flex-direction:row;align-items:center}
  body .experience .scene-selectors button{width:44px;height:44px}
  body .experience .experience-stage{min-height:720px}
- body .experience .experience-bottom{gap:8px;bottom:20px}
+ body .experience .experience-bottom{gap:8px;bottom:20px;right:82px}
+ body .experience .experience-bottom .scroll-cue{max-width:125px}
  body .experience .experience-side p{font-size:18px}
 }
