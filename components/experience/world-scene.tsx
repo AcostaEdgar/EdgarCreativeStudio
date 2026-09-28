@@ -270,7 +270,9 @@ export function WorldScene({
             alt=""
             width={slots.hero[index].width}
             height={slots.hero[index].height}
-            priority={index === active}
+            quality={80}
+            loading={index === active ? "eager" : "lazy"}
+            fetchPriority={index === active ? "high" : "auto"}
           />
         ))}
       </div>
