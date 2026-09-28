@@ -35,7 +35,7 @@ export function HomeExperience(){
   return()=>{observer.disconnect();reduced.removeEventListener("change",update);document.removeEventListener("visibilitychange",update);el.pause()};
  },[paused]);
  const control=<button className="motion-control" aria-pressed={paused} onClick={()=>setPaused(!paused)}>{paused?<Play size={13}/>:<Pause size={13}/>} {paused?"RESUME MOTION":"PAUSE MOTION"}</button>;
- return <div className={`experience ${paused?"motion-paused":""}`}><HomeCursor/><main id="main">
+ return <div className={`experience ${paused?"motion-paused":""}`}><HomeCursor paused={paused}/><main id="main">
  <section ref={scroll} className="experience-scroll" aria-label="The entrance"><div className="experience-stage"><Navigation home/><div className="stage-grid"/><div className="stage-topline"><span><i/> A SPACE FOR THE UNEXPECTED</span><span>EDGAR ACOSTA / CREATIVE STUDIO</span></div>
  <div className="portal-scene"><WorldScene paused={paused} active={active}/></div>
  <div className="experience-title"><h1>WORLD<br/><span>WITHIN.</span></h1></div>

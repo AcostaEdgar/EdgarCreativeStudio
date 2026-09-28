@@ -165,13 +165,6 @@
   pointer-events: none;
   mix-blend-mode: difference;
 }
-@media (hover: hover) and (pointer: fine) {
-  .experience,
-  .experience a,
-  .experience button {
-    cursor: none;
-  }
-}
 @media (prefers-reduced-motion: reduce), (hover: none), (pointer: coarse) {
   .home-cursor {
     display: none;

@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 
 type TrailPoint = { x: number; y: number };
 
-export function HomeCursor() {
+export function HomeCursor({ paused = false }: { paused?: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -18,94 +18,96 @@ export function HomeCursor() {
     const context = canvas.getContext("2d");
     if (!context) return;
 
-    const points: TrailPoint[] = Array.from({ length: 42 }, () => ({ x: -100, y: -100 }));
-    let target = { x: -100, y: -100 };
-    let visible = false;
+    const points: (TrailPoint & { time: number })[] = [];
     let frame = 0;
-    let lastMove = performance.now();
+    let previous: (TrailPoint & { time: number }) | null = null;
+    const lifetime = 180;
+    const maxLength = 105;
 
     const resize = () => {
-      const ratio = Math.min(devicePixelRatio, 2);
+      const ratio = Math.min(devicePixelRatio, 1.5);
       canvas.width = Math.round(innerWidth * ratio);
       canvas.height = Math.round(innerHeight * ratio);
-      canvas.style.width = `${innerWidth}px`;
-      canvas.style.height = `${innerHeight}px`;
       context.setTransform(ratio, 0, 0, ratio, 0, 0);
     };
-
-    const move = (event: PointerEvent) => {
-      target = { x: event.clientX, y: event.clientY };
-      if (!visible) points.forEach((point) => Object.assign(point, target));
-      visible = true;
-      lastMove = performance.now();
-    };
-
     const leave = () => {
-      visible = false;
-    };
-
-    const draw = (time: number) => {
+      cancelAnimationFrame(frame);
+      frame = 0;
+      points.length = 0;
+      previous = null;
       context.clearRect(0, 0, innerWidth, innerHeight);
-
-      points[0].x += (target.x - points[0].x) * 0.22;
-      points[0].y += (target.y - points[0].y) * 0.22;
-      for (let index = 1; index < points.length; index += 1) {
-        const lead = points[index - 1];
-        const point = points[index];
-        const ease = Math.max(0.035, 0.1 - index * 0.0015);
-        point.x += (lead.x - point.x) * ease;
-        point.y += (lead.y - point.y) * ease;
-      }
-
-      const idleFade = Math.max(0, 1 - (time - lastMove - 250) / 1400);
-      const opacity = visible ? Math.max(0.28, idleFade) : idleFade;
-      context.fillStyle = `rgba(255, 255, 255, ${opacity})`;
-
-      points.forEach((point, index) => {
-        const previous = points[Math.max(0, index - 1)];
-        const next = points[Math.min(points.length - 1, index + 1)];
-        const angle = Math.atan2(next.y - previous.y, next.x - previous.x) + Math.PI / 2;
-        const samples = index < points.length - 1 ? 3 : 1;
-        for (let sample = 0; sample < samples; sample += 1) {
-          const amount = sample / samples;
-          const progress = (index + amount) / (points.length - 1);
-          const x = point.x + (next.x - point.x) * amount;
-          const y = point.y + (next.y - point.y) * amount;
-          const envelope = Math.sin(progress * Math.PI);
-          const halfWidth = Math.max(1, Math.round(envelope * 8));
-          const spacing = 6;
-          const size = progress < 0.1 ? 3 : 2.5;
-
-          for (let offset = -halfWidth; offset <= halfWidth; offset += 1) {
-            if ((index + sample + offset) % 2 && Math.abs(offset) === halfWidth) continue;
-            const taper = 1 - Math.abs(offset) / (halfWidth + 1);
-            context.globalAlpha = opacity * (0.35 + taper * 0.65) * (1 - progress * 0.72);
-            context.fillRect(
-              x + Math.cos(angle) * offset * spacing - size / 2,
-              y + Math.sin(angle) * offset * spacing - size / 2,
-              size,
-              size,
-            );
+    };
+    const draw = (time: number) => {
+      frame = 0;
+      context.clearRect(0, 0, innerWidth, innerHeight);
+      while (points.length && time - points[0].time >= lifetime) points.shift();
+      if (!points.length) return;
+      const left = Math.floor((Math.min(...points.map(p => p.x)) - 20) / 6) * 6;
+      const top = Math.floor((Math.min(...points.map(p => p.y)) - 20) / 6) * 6;
+      const right = Math.max(...points.map(p => p.x)) + 20;
+      const bottom = Math.max(...points.map(p => p.y)) + 20;
+      context.fillStyle = "#fff";
+      // A single dot per cell keeps the halftone crisp, even around corners.
+      for (let y = top; y <= bottom; y += 6) {
+        for (let x = left; x <= right; x += 6) {
+          let strength = 0;
+          for (const point of points) {
+            const life = Math.max(0, 1 - (time - point.time) / lifetime);
+            const radius = 5 + 14 * Math.sin(life * Math.PI * 0.8);
+            strength = Math.max(strength, (1 - Math.hypot(x - point.x, y - point.y) / radius) * life);
           }
+          if (strength <= 0.08) continue;
+          const size = 1 + Math.min(1, strength * 2) * 0.9;
+          context.globalAlpha = Math.min(0.8, strength * 1.3);
+          context.fillRect(x - size / 2, y - size / 2, size, size);
         }
-      });
+      }
       context.globalAlpha = 1;
       frame = requestAnimationFrame(draw);
+    };
+    const move = (event: PointerEvent) => {
+      if (!finePointer.matches || reducedMotion.matches || paused || event.pointerType === "touch") return;
+      if (event.target instanceof Element && event.target.closest("dialog, input, textarea, select")) {
+        leave();
+        return;
+      }
+      const current = { x: event.clientX, y: event.clientY, time: performance.now() };
+      if (previous && current.time - previous.time < lifetime) {
+        const distance = Math.hypot(current.x - previous.x, current.y - previous.y);
+        const length = Math.min(distance, maxLength);
+        const steps = Math.ceil(length / 6);
+        for (let i = steps; i >= 0; i--) {
+          const t = steps ? i / steps * length / Math.max(1, distance) : 0;
+          points.push({ x: current.x + (previous.x - current.x) * t,
+            y: current.y + (previous.y - current.y) * t,
+            time: current.time - (current.time - previous.time) * t });
+        }
+      }
+      previous = current;
+      while (points.length && (points.length > 32 || current.time - points[0].time >= lifetime || Math.hypot(points[0].x - current.x, points[0].y - current.y) > maxLength)) points.shift();
+      if (!frame && points.length) frame = requestAnimationFrame(draw);
     };
 
     resize();
     addEventListener("resize", resize);
     addEventListener("pointermove", move, { passive: true });
     document.documentElement.addEventListener("mouseleave", leave);
-    frame = requestAnimationFrame(draw);
+    addEventListener("blur", leave);
+    reducedMotion.addEventListener("change", leave);
+    finePointer.addEventListener("change", leave);
+    document.addEventListener("visibilitychange", leave);
 
     return () => {
-      cancelAnimationFrame(frame);
+      leave();
+      removeEventListener("blur", leave);
+      reducedMotion.removeEventListener("change", leave);
+      finePointer.removeEventListener("change", leave);
+      document.removeEventListener("visibilitychange", leave);
       removeEventListener("resize", resize);
       removeEventListener("pointermove", move);
       document.documentElement.removeEventListener("mouseleave", leave);
     };
-  }, []);
+  }, [paused]);
 
   return <canvas ref={canvasRef} className="home-cursor" aria-hidden="true" />;
 }
