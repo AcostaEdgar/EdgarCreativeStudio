@@ -1,0 +1,1 @@
+export const brand = { name: "Edgar Creative Studio", byline: "by Edgar Acosta", domain: "edgaracosta.com", email: "contact@edgaracosta.com", description: "A one-person creative studio for brands with something at stake — strategy, words, images, and digital worlds shaped into one clear point of view." };

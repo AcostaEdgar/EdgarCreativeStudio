@@ -1,0 +1,22 @@
+node_modules/
+.next/
+out/
+.env*
+!.env.example
+*.tsbuildinfo
+.DS_Store
+public/art/*
+!public/art/.gitkeep
+docs/source/
+docs/references/
+test-results/
+
+# Full-size source references; optimized WebP assets are versioned.
+/public/worlds/*.jpeg
+
+# Private account database and original uploads
+.feni-data/
+
+.next-test/
+
+.pnpm-store/
