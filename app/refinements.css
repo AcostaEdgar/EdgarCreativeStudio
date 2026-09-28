@@ -1,0 +1,41 @@
+.studio-menu-dialog{position:fixed;inset:0;margin:0;width:100%;max-width:none;height:100dvh;max-height:none;border:0;padding:32px 4vw;background:var(--night);color:var(--bone);overflow:auto}
+.studio-menu-dialog::backdrop{background:#080b09cc;backdrop-filter:blur(18px)}
+.studio-menu-dialog[open]{display:flex;flex-direction:column;animation:menu-arrive .45s cubic-bezier(.2,.8,.2,1)}
+.studio-menu-top,.studio-menu-bottom{display:flex;justify-content:space-between;gap:24px;align-items:center;font:10px var(--font-mono);letter-spacing:.07em}
+.studio-menu-top button{display:flex;align-items:center;gap:18px;min-height:48px;padding:8px 16px;border:1px solid var(--line)}
+.studio-menu-layout{display:grid;grid-template-columns:1fr 1.7fr;gap:6vw;align-items:center;flex:1;padding:50px 0}
+.studio-menu-intro p{font:clamp(28px,3vw,48px)/1.1 var(--font-serif);margin:25px 0}
+.studio-menu-intro a{font-size:12px;color:var(--bone-muted)}
+.menu-orbit{display:grid;place-items:center;width:130px;height:130px;border:1px solid var(--line);border-radius:50%;font-size:72px;box-shadow:inset 0 0 50px #a8ad8c15}
+.studio-menu-links{display:flex;flex-direction:column!important;gap:0!important;align-items:stretch!important}
+.studio-menu-links a{display:flex;align-items:center;gap:20px;padding:25px 0;border-bottom:1px solid var(--line);font-size:clamp(32px,4.5vw,76px)!important;letter-spacing:-.055em;line-height:1.08;transition:color .25s,transform .25s}
+.studio-menu-links small{font:10px var(--font-mono);letter-spacing:0;color:var(--bone-muted)}
+.studio-menu-links a>svg{margin-left:auto;flex-shrink:0;width:32px;height:32px;transition:transform .25s}
+.studio-menu-links a:hover>svg{transform:translate(5px,-5px)}
+.studio-menu-bottom{border-top:1px solid var(--line);padding:24px 0}
+.studio-menu-bottom a{padding:12px 0}
+@keyframes menu-arrive{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
+.studio-practice-grid article{transition:background .4s,padding .4s}.studio-practice-grid article:hover{background:var(--night-2);padding-left:18px}
+.enter-gallery svg,.studio-contact-link{transition:transform .3s}.enter-gallery:hover svg{transform:translate(5px,-5px)}
+.museum-work-stepper{display:flex;gap:4px}.museum-work-stepper button{width:44px;height:44px;border:1px solid var(--line);background:var(--night);font-size:18px}
+:where(a,button,input,select,textarea):focus-visible{outline:2px solid var(--bone);outline-offset:5px}
+@media(max-width:700px){
+ .experience-nav{padding:18px!important;gap:12px}.experience-logo{font-size:25px!important}.experience-nav nav{gap:10px!important}.experience-nav nav>a{display:none}.experience-nav nav>button{min-height:44px;padding:8px!important}.theme-toggle{min-width:44px;min-height:44px}
+ .studio-menu-dialog{padding:20px 22px;padding-bottom:max(20px,env(safe-area-inset-bottom))}.studio-menu-top{font-size:8px}.studio-menu-layout{display:flex;flex-direction:column-reverse;align-items:stretch;gap:38px;padding:24px 0}.studio-menu-links a{font-size:36px!important;padding:20px 0;gap:12px}.studio-menu-intro{display:grid;grid-template-columns:64px 1fr;gap:12px}.menu-orbit{width:60px;height:60px;font-size:36px}.studio-menu-intro p{font-size:26px;margin:0}.studio-menu-intro a{grid-column:2}.studio-menu-bottom{font-size:8px;line-height:1.6}.studio-menu-bottom span{max-width:170px}
+ .experience-stage{min-height:720px}.experience-title{top:29%}.experience-side{bottom:24%;max-width:none}.experience-side p{font-size:18px}.scene-caption{left:22px;right:auto;bottom:11%;max-width:none;padding:10px 12px;flex-direction:row;align-items:center}.scene-caption>span{max-width:90px;font-size:8px}.scene-selectors button{width:44px;height:44px}.experience-bottom{bottom:20px;gap:8px}.motion-control{min-height:44px!important}.experience-bottom .scroll-cue{max-width:170px;line-height:1.5}
+ .museum-installation{height:85svh;min-height:620px}.museum-identity{max-width:calc(100% - 32px)}.museum-identity p{font-size:28px;max-width:260px;overflow-wrap:anywhere}.museum-compass{display:none}.museum-navigation{bottom:122px;width:calc(100% - 24px);max-width:none;padding:8px;gap:6px}.museum-navigation>button{min-height:44px;padding:10px;font-size:11px}.museum-select{padding:6px}.museum-select select{min-height:44px}.museum-step button{width:44px;height:44px}.museum-foot>button{min-height:44px}.museum-foot>span{font-size:0}.museum-foot>span::after{content:'DRAG TO LOOK · USE ARROWS TO WALK';font-size:8px}.site-audio{right:12px;bottom:12px}.site-audio button{min-width:44px;min-height:44px}.portfolio-detail>img{height:42dvh}.detail-caption{flex-wrap:wrap}.detail-caption>div:last-child{width:100%;justify-content:space-between}.detail-caption button{min-width:64px;min-height:48px}.admin-work-list{grid-template-columns:1fr}.admin-header{flex-wrap:wrap}.admin-upload-fields>*{min-width:0;width:100%}.admin-section-nav a{white-space:nowrap;min-height:44px;display:flex;align-items:center}
+}
+@media(prefers-reduced-motion:reduce){.studio-menu-dialog[open]{animation:none}.studio-menu-links a,.studio-menu-links svg,.studio-practice-grid article{transition:none}}
+/* Route styles are loaded after layout CSS; keep the mobile composition authoritative. */
+@media(max-width:700px){
+ body .experience .experience-nav>nav>a,body .portfolio-world .experience-nav>nav>a{display:none}
+ body .studio-menu-dialog .studio-menu-links>a{display:flex}
+ body .experience .experience-title{top:29%}
+ body .experience .experience-side{bottom:24%;max-width:none}
+ body .experience .scene-caption{left:22px;right:auto;bottom:11%;max-width:none;flex-direction:row;align-items:center}
+ body .experience .scene-selectors button{width:44px;height:44px}
+ body .experience .experience-stage{min-height:720px}
+ body .experience .experience-bottom{gap:8px;bottom:20px;right:82px}
+ body .experience .experience-bottom .scroll-cue{max-width:125px}
+ body .experience .experience-side p{font-size:18px}
+}
