@@ -8,7 +8,7 @@ Brand settings: `lib/brand.ts`. Published Edgar portfolio assets: `public/media`
 
 The restored ink-motion section is local and can be replaced with Edgar-owned footage later. Contact email: `contact@edgaracosta.com`.
 
-For local admin, open http://127.0.0.1:3000/admin and use `edgar-local`, or set `ADMIN_PASSWORD` in `.env.local`. The local session is intentionally in-memory and resets when the dev server restarts. Multiple selected image files are optimized to WebP, added to the portfolio and collage, and can be added to the four-image entrance hero. The writing sample is stored in `content/writing.json`. The production version should replace this local filesystem adapter with owner authentication and Vercel Blob before launch.
+For local admin, set `ADMIN_PASSWORD` in `.env.local`, then open http://127.0.0.1:3000/admin. The local session is intentionally in-memory and resets when the dev server restarts. Multiple selected image files are optimized to WebP, added to the portfolio and collage, and can be added to the four-image entrance hero. The writing sample is stored in `content/writing.json`. The production version should replace this local filesystem adapter with owner authentication and Vercel Blob before launch.
 
 ## Deployment (owner setup)
 
