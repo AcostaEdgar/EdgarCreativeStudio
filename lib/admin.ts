@@ -13,7 +13,7 @@ export function adminConfigured() {
 }
 
 export async function checkAdminPassword(candidate: string) {
-  const hash = process.env.ADMIN_PASSWORD_HASH;
+  const hash = process.env.ADMIN_PASSWORD_HASH?.trim();
   if (hash) return compare(candidate, hash);
   const local = !process.env.VERCEL ? process.env.ADMIN_PASSWORD : undefined;
   if (!local) return false;
@@ -25,6 +25,11 @@ export async function checkAdminPassword(candidate: string) {
 export function loginAllowed(ip: string) {
   const entry = loginAttempts.get(ip);
   return !entry || Date.now() > entry.until;
+}
+
+export function retryMinutes(ip: string) {
+  const entry = loginAttempts.get(ip);
+  return Math.max(1, Math.ceil(((entry?.until ?? 0) - Date.now()) / 60_000));
 }
 
 export function recordLoginFailure(ip: string) {
