@@ -22,3 +22,4 @@ test-results/
 .pnpm-store/
 
 .next-check/
+.next-review/
