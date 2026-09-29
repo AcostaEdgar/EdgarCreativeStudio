@@ -8,6 +8,8 @@ import {
   ArrowDown,
   RotateCcw,
   RotateCw,
+  SlidersHorizontal,
+  X,
 } from "lucide-react";
 import { workTitle } from "@/lib/work-labels";
 import type { Work } from "@/lib/art";
@@ -54,6 +56,7 @@ export function MuseumScene({
   const [active, setActive] = useState(0);
   const [overview, setOverview] = useState(true);
   const [paused, setPaused] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
   const frozen = useRef(false);
   function send(c: Command) {
     command.current(c);
@@ -671,7 +674,7 @@ export function MuseumScene({
   }, [works, initialIndex]);
   return (
     <div
-      className={`museum-installation ${fallback ? "has-image-fallback" : ""}`}
+      className={`museum-installation ${fallback ? "has-image-fallback" : ""} ${toolsOpen ? "mobile-tools-open" : ""}`}
     >
       <div
         ref={host}
@@ -816,6 +819,17 @@ export function MuseumScene({
           }}
         >
           {paused ? "Resume atmosphere" : "Pause atmosphere"}
+        </button>
+      </div>
+      <div className="museum-mobile-dock" aria-label="Gallery navigation">
+        <button aria-label="Visit previous artwork" onClick={() => send({ type: "visit", index: (active - 1 + works.length) % works.length })}><ArrowLeft size={18} /></button>
+        <button className="museum-mobile-caption" onClick={() => open.current(active)} aria-label={`View ${workTitle(works[active])}`}>
+          <span>{String(active + 1).padStart(2, "0")} / {String(works.length).padStart(2, "0")} · VIEW WORK</span>
+          <strong>{workTitle(works[active])}</strong>
+        </button>
+        <button aria-label="Visit next artwork" onClick={() => send({ type: "visit", index: (active + 1) % works.length })}><ArrowRight size={18} /></button>
+        <button className="museum-mobile-tools" aria-label={toolsOpen ? "Close gallery controls" : "Open gallery controls"} aria-expanded={toolsOpen} onClick={() => setToolsOpen(!toolsOpen)}>
+          {toolsOpen ? <X size={18} /> : <SlidersHorizontal size={18} />}<span>Controls</span>
         </button>
       </div>
     </div>

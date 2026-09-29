@@ -1,0 +1,65 @@
+.museum-mobile-dock { display: none; }
+
+@media (max-width: 700px) {
+  .portfolio-world.studio-edition > .experience-nav {
+    position: absolute;
+    inset: 0 0 auto;
+    height: calc(64px + env(safe-area-inset-top));
+    padding: env(safe-area-inset-top) 16px 0;
+    background: linear-gradient(var(--night), transparent);
+  }
+  .portfolio-world.studio-edition > main { display: flex; flex-direction: column; }
+  .portfolio-world.studio-edition .portfolio-heading { order: 1; padding: 36px 20px; }
+  .portfolio-world.studio-edition .portfolio-artist { order: 2; }
+  .portfolio-world.studio-edition .portfolio-experience { position: relative; border: 0; }
+  .portfolio-world.studio-edition .portfolio-toolbar {
+    position: absolute; z-index: 5;
+    top: calc(64px + env(safe-area-inset-top)); left: 0; right: 0;
+    min-height: 48px; padding: 0 16px; border: 0;
+    background: transparent; justify-content: flex-end;
+  }
+  .portfolio-world.studio-edition .portfolio-toolbar > span { visibility: hidden; }
+  .portfolio-world.studio-edition .portfolio-toolbar > div {
+    background: color-mix(in srgb, var(--night) 90%, transparent);
+    border: 1px solid var(--line); border-radius: 24px; padding: 2px;
+  }
+  .portfolio-world.studio-edition .portfolio-toolbar button { border-radius: 22px; }
+  .portfolio-world.studio-edition .museum-installation {
+    height: 100svh; min-height: 420px; max-height: none;
+  }
+  .portfolio-world.studio-edition .museum-identity { display: none; }
+  .portfolio-world.studio-edition .museum-installation:not(.mobile-tools-open) .museum-navigation,
+  .portfolio-world.studio-edition .museum-installation:not(.mobile-tools-open) .museum-foot,
+  .portfolio-world.studio-edition .museum-installation:not(.mobile-tools-open) .museum-compass { display: none; }
+  .portfolio-world.studio-edition .museum-mobile-dock {
+    display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px 60px;
+    position: absolute; z-index: 6; bottom: 0; left: 0; right: 0;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); gap: 4px;
+    background: color-mix(in srgb, var(--night) 94%, transparent);
+    border-top: 1px solid var(--line); backdrop-filter: blur(16px);
+  }
+  .museum-mobile-dock button { min-height: 48px; color: var(--bone); display: grid; place-content: center; }
+  .museum-mobile-dock .museum-mobile-caption { text-align: left; display: flex; flex-direction: column; justify-content: center; overflow: hidden; gap: 5px; padding: 0 6px; }
+  .museum-mobile-caption span { font: 8px var(--font-mono); color: var(--bone-muted); letter-spacing: .06em; }
+  .museum-mobile-caption strong { font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+  .museum-mobile-tools { border-left: 1px solid var(--line); gap: 4px; justify-items: center; }
+  .museum-mobile-tools span { font: 8px var(--font-mono); }
+  .portfolio-world.studio-edition .museum-navigation {
+    bottom: calc(146px + env(safe-area-inset-bottom)); width: calc(100% - 24px);
+    border-radius: 12px 12px 0 0; box-shadow: none;
+  }
+  .portfolio-world.studio-edition .museum-foot {
+    bottom: calc(78px + env(safe-area-inset-bottom)); left: 12px; right: 12px;
+    padding: 10px; background: var(--night); border: 1px solid var(--line);
+    border-radius: 0 0 12px 12px; gap: 4px;
+  }
+  .portfolio-world.studio-edition .museum-foot > span { display: none; }
+  .portfolio-world.studio-edition .mobile-tools-open .museum-compass {
+    display: block; top: calc(126px + env(safe-area-inset-top)); right: 16px;
+    width: 136px; height: 136px;
+  }
+  .portfolio-world.studio-edition .museum-status { top: 126px; left: 16px; max-width: 55%; }
+  .portfolio-world.studio-edition .is-index .portfolio-wall { padding-top: 132px; }
+  body:has(.portfolio-world.studio-edition) .site-audio { bottom: auto; top: calc(68px + env(safe-area-inset-top)); left: 16px; right: auto; }
+  .museum-mobile-dock button:focus-visible { outline: 2px solid var(--bone); outline-offset: -2px; border-radius: 4px; }
+}
