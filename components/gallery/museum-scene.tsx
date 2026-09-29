@@ -1,6 +1,15 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import {
+  ArrowLeft,
+  ArrowRight,
+  ArrowUp,
+  ArrowDown,
+  RotateCcw,
+  RotateCw,
+} from "lucide-react";
+import { workTitle } from "@/lib/work-labels";
 import type { Work } from "@/lib/art";
 
 const angleFor = (index: number, count: number) =>
@@ -16,18 +25,31 @@ export function MuseumScene({
   works,
   onOpen,
   initialIndex,
+  suspended = false,
+  focusIndex,
 }: {
   works: Work[];
   onOpen: (index: number) => void;
   initialIndex?: number;
+  suspended?: boolean;
+  focusIndex?: number;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const command = useRef<(c: Command) => void>(() => {});
   const open = useRef(onOpen);
+  const suspendedRef = useRef(suspended);
+  useEffect(() => {
+    suspendedRef.current = suspended;
+  }, [suspended]);
+  useEffect(() => {
+    if (focusIndex !== undefined)
+      command.current({ type: "visit", index: focusIndex });
+  }, [focusIndex]);
   useEffect(() => {
     open.current = onOpen;
   }, [onOpen]);
   const [status, setStatus] = useState("Preparing your gallery…");
+  const [ready, setReady] = useState(false);
   const [fallback, setFallback] = useState(false);
   const [active, setActive] = useState(0);
   const [overview, setOverview] = useState(true);
@@ -48,13 +70,28 @@ export function MuseumScene({
         antialias: true,
         powerPreference: "low-power",
       });
-      renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+      renderer.setPixelRatio(
+        Math.min(devicePixelRatio, innerWidth < 700 ? 1.5 : 2),
+      );
       renderer.outputColorSpace = T.SRGBColorSpace;
       el.appendChild(renderer.domElement);
+      cleanup = () => {
+        renderer.dispose();
+        renderer.domElement.remove();
+      };
       const scene = new T.Scene();
       const camera = new T.PerspectiveCamera(55, 1, 0.1, 600);
       // The room grows with the collection so a 40-work show still has breathing room.
-      const radius = Math.max(8, works.length * 1.25);
+      const spans = works.map((w) => {
+        const cm = w.unit === "in" ? 2.54 : w.unit === "mm" ? 0.1 : 1;
+        return w.physicalWidth && w.physicalHeight
+          ? Math.min(12, w.physicalWidth * cm * 0.025) + 2
+          : 4.5;
+      });
+      const radius = Math.max(
+        8,
+        spans.reduce((a, b) => a + b, 0) / (Math.PI * 2),
+      );
       const materials: import("three").Material[] = [];
       const geometries: import("three").BufferGeometry[] = [];
       const textures: import("three").Texture[] = [];
@@ -144,69 +181,100 @@ export function MuseumScene({
           opacity: 0.55,
         }),
       );
-      const beamMat = registerMaterial(
-        new T.MeshBasicMaterial({
-          color: 0xeaf3d7,
+      // Limestone seams and a suspended oculus give the room a human scale.
+      const stoneCanvas = document.createElement("canvas");
+      stoneCanvas.width = stoneCanvas.height = 256;
+      const stone = stoneCanvas.getContext("2d")!;
+      stone.fillStyle = "#999993";
+      stone.fillRect(0, 0, 256, 256);
+      for (let i = 0; i < 2400; i++) {
+        const x = (i * 73.71) % 256,
+          y = (i * 31.43) % 256;
+        stone.fillStyle = i % 2 ? "#ffffff0a" : "#00000008";
+        stone.fillRect(x, y, 1, 1);
+      }
+      stone.strokeStyle = "#55554f";
+      stone.lineWidth = 0.7;
+      stone.strokeRect(0, 0, 256, 256);
+      const stoneTexture = new T.CanvasTexture(stoneCanvas);
+      stoneTexture.wrapS = stoneTexture.wrapT = T.RepeatWrapping;
+      stoneTexture.repeat.set(radius / 2, radius / 2);
+      textures.push(stoneTexture);
+      const seamMaterial = registerMaterial(
+        new T.LineBasicMaterial({
+          color: 0x8a8a7e,
           transparent: true,
-          opacity: 0.085,
-          depthWrite: false,
-          side: T.DoubleSide,
+          opacity: 0.1,
         }),
       );
-      const beam = new T.Group();
-      scene.add(beam);
-      for (let i = 0; i < 5; i++) {
-        const pillar = mesh(
-          new T.CylinderGeometry(
-            0.14 + i * 0.14,
-            0.14 + i * 0.14,
-            8,
-            40,
-            1,
-            true,
-          ),
-          beamMat,
-          beam,
+      const seamPoints: import("three").Vector3[] = [];
+      for (let x = -Math.floor(radius / 3) * 3; x <= radius; x += 3) {
+        const edge = Math.sqrt(Math.max(0, radius * radius - x * x));
+        seamPoints.push(
+          new T.Vector3(x, 0.012, -edge),
+          new T.Vector3(x, 0.012, edge),
         );
-        pillar.position.y = 4;
+        seamPoints.push(
+          new T.Vector3(-edge, 0.012, x),
+          new T.Vector3(edge, 0.012, x),
+        );
       }
-      const core = mesh(
-        new T.CylinderGeometry(0.045, 0.045, 8, 20),
-        accent,
-        beam,
+      const seamGeometry = new T.BufferGeometry().setFromPoints(seamPoints);
+      geometries.push(seamGeometry);
+      scene.add(new T.LineSegments(seamGeometry, seamMaterial));
+      floorMat.bumpMap = stoneTexture;
+      floorMat.bumpScale = 0.025;
+      floorMat.roughness = 0.65;
+      const architecture = registerMaterial(
+        new T.MeshStandardMaterial({
+          color: 0x77746c,
+          roughness: 0.75,
+          metalness: 0.08,
+        }),
       );
-      core.position.y = 4;
-      const pool = mesh(new T.PlaneGeometry(7, 7), glowMat);
-      pool.rotation.x = -Math.PI / 2;
-      pool.position.y = 0.02;
-      const plinth = mesh(
-        new T.CylinderGeometry(0.85, 1.05, 0.12, 64),
+      const oculusRadius = radius * 0.48;
+      const oculus = mesh(
+        new T.TorusGeometry(oculusRadius, 0.11, 8, 128),
         frameMat,
       );
-      plinth.position.y = 0.06;
-      const points = new T.BufferGeometry();
-      geometries.push(points);
-      const coords = new Float32Array(180 * 3);
-      for (let i = 0; i < 180; i++) {
-        const a = i * 2.399;
-        const r = 1.1 + ((i % 19) / 19) * 1.7;
-        coords[i * 3] = Math.cos(a) * r;
-        coords[i * 3 + 1] = ((i % 43) / 43) * 7;
-        coords[i * 3 + 2] = Math.sin(a) * r;
-      }
-      points.setAttribute("position", new T.BufferAttribute(coords, 3));
-      const dust = new T.Points(
-        points,
-        registerMaterial(
-          new T.PointsMaterial({
-            color: 0xe9e7c8,
-            size: 0.025,
-            transparent: true,
-            opacity: 0.55,
-          }),
-        ),
+      oculus.rotation.x = Math.PI / 2;
+      oculus.position.y = 6.65;
+      const diffuser = mesh(
+        new T.TorusGeometry(oculusRadius, 0.025, 6, 128),
+        accent,
       );
-      scene.add(dust);
+      diffuser.rotation.x = Math.PI / 2;
+      diffuser.position.y = 6.52;
+      for (let i = 0; i < 4; i++) {
+        const a = (i * Math.PI) / 2;
+        const cable = mesh(
+          new T.CylinderGeometry(0.015, 0.015, 2, 6),
+          frameMat,
+        );
+        cable.position.set(
+          Math.sin(a) * oculusRadius,
+          7.6,
+          Math.cos(a) * oculusRadius,
+        );
+      }
+      const bench = mesh(new T.BoxGeometry(3.2, 0.18, 1.05), architecture);
+      bench.position.set(0, 0.65, 0);
+      for (const x of [-1.2, 1.2]) {
+        const support = mesh(new T.BoxGeometry(0.16, 0.6, 0.85), frameMat);
+        support.position.set(x, 0.3, 0);
+      }
+      const shadowMat = registerMaterial(
+        new T.MeshBasicMaterial({
+          map: glowTexture,
+          color: 0x000000,
+          transparent: true,
+          opacity: 0.7,
+          depthWrite: false,
+        }),
+      );
+      const benchShadow = mesh(new T.PlaneGeometry(5, 2.6), shadowMat);
+      benchShadow.rotation.x = -Math.PI / 2;
+      benchShadow.position.y = 0.015;
       const targets: import("three").Mesh[] = [];
       let loaded = 0,
         failed = 0;
@@ -218,25 +286,41 @@ export function MuseumScene({
         group.position.set(Math.sin(a) * radius, 2.7, Math.cos(a) * radius);
         group.rotation.y = a + Math.PI;
         scene.add(group);
-        const spot = new T.SpotLight(0xfff0cf, 8, 8, Math.PI / 7, 0.72, 1.3);
-        spot.position.set(0, 2.25, 1.45);
-        spot.target.position.set(0, 0, 0);
-        group.add(spot, spot.target);
-        const hasDimensions = Number(work.physicalWidth)>0 && Number(work.physicalHeight)>0;
-        const unitInCm = work.unit === "in" ? 2.54 : work.unit === "mm" ? 0.1 : 1;
-        const physicalWidth = hasDimensions ? work.physicalWidth! * unitInCm : work.width;
-        const physicalHeight = hasDimensions ? work.physicalHeight! * unitInCm : work.height;
+        const hasDimensions =
+          Number(work.physicalWidth) > 0 && Number(work.physicalHeight) > 0;
+        const unitInCm =
+          work.unit === "in" ? 2.54 : work.unit === "mm" ? 0.1 : 1;
+        const physicalWidth = hasDimensions
+          ? work.physicalWidth! * unitInCm
+          : work.width;
+        const physicalHeight = hasDimensions
+          ? work.physicalHeight! * unitInCm
+          : work.height;
         const ratio = physicalWidth / physicalHeight;
-        const h = hasDimensions ? Math.max(0.15, Math.min(3.8, physicalHeight * 0.025)) : Math.min(2.8, 2.5 / ratio),
+        const h = hasDimensions
+            ? Math.max(0.15, Math.min(3.8, physicalHeight * 0.025))
+            : Math.min(2.8, 2.5 / ratio),
           w = h * ratio;
         const surround = mesh(
-          new T.BoxGeometry(w + 0.16, h + 0.16, 0.11),
+          new T.BoxGeometry(w + 0.1, h + 0.1, 0.09),
           frameMat,
           group,
         );
         surround.position.z = 0.04;
         const light = mesh(new T.PlaneGeometry(4.3, 5.8), glowMat, group);
         light.position.z = -0.05;
+        const contactShadow = mesh(
+          new T.PlaneGeometry(w + 0.5, h + 0.5),
+          shadowMat,
+          group,
+        );
+        contactShadow.position.set(0.04, -0.07, -0.025);
+        const fixture = mesh(
+          new T.BoxGeometry(0.76, 0.09, 0.16),
+          frameMat,
+          group,
+        );
+        fixture.position.set(0, 2.15, 0.1);
         const bar = mesh(new T.BoxGeometry(0.65, 0.025, 0.1), accent, group);
         bar.position.set(0, 2.1, 0.08);
         const mat = registerMaterial(
@@ -246,10 +330,37 @@ export function MuseumScene({
         painting.position.z = 0.103;
         painting.userData.index = i;
         targets.push(painting);
+        const labelCanvas = document.createElement("canvas");
+        labelCanvas.width = 512;
+        labelCanvas.height = 160;
+        const label = labelCanvas.getContext("2d")!;
+        label.fillStyle = "#dedbd1";
+        label.fillRect(0, 0, 512, 160);
+        label.fillStyle = "#252823";
+        label.font = "24px sans-serif";
+        label.fillText(
+          `${String(i + 1).padStart(2, "0")} / ${workTitle(work)}`,
+          22,
+          50,
+          465,
+        );
+        label.font = "18px sans-serif";
+        label.fillText(`${work.year} · ${work.medium}`, 22, 92, 465);
+        label.font = "14px sans-serif";
+        label.fillText("EDGAR ACOSTA", 22, 133);
+        const labelTexture = new T.CanvasTexture(labelCanvas);
+        labelTexture.colorSpace = T.SRGBColorSpace;
+        textures.push(labelTexture);
+        const plaque = mesh(
+          new T.PlaneGeometry(0.82, 0.256),
+          registerMaterial(new T.MeshBasicMaterial({ map: labelTexture })),
+          group,
+        );
+        plaque.position.set(-w / 2 + 0.41, -h / 2 - 0.3, 0.1);
         pending.push(async () => {
           try {
             const tex: import("three").Texture = await loader.loadAsync(
-              work.image,
+              `/_next/image?url=${encodeURIComponent(work.image)}&w=1920&q=80`,
             );
             if (disposed) {
               tex.dispose();
@@ -258,7 +369,8 @@ export function MuseumScene({
             const image = tex.image as HTMLImageElement;
             const scale = Math.min(
               1,
-              768 / Math.max(image.width, image.height),
+              (innerWidth < 700 ? 1024 : 1536) /
+                Math.max(image.width, image.height),
             );
             if (scale < 1) {
               const canvas = document.createElement("canvas");
@@ -284,6 +396,7 @@ export function MuseumScene({
             if (!disposed) setFallback(true);
           }
           loaded++;
+          if (!disposed && loaded >= Math.min(3, works.length)) setReady(true);
           if (!disposed)
             setStatus(
               loaded === works.length
@@ -305,7 +418,8 @@ export function MuseumScene({
         lightMode = document.documentElement.dataset.theme === "light";
         scene.background = new T.Color(lightMode ? 0xd9d8ce : 0x101615);
         wallMat.color.set(lightMode ? 0xd8d6cb : 0x292c2a);
-        floorMat.color.set(lightMode ? 0xb6b8b0 : 0x151a19);
+        floorMat.color.set(lightMode ? 0xb6b3a9 : 0x242726);
+        architecture.color.set(lightMode ? 0xaaa69a : 0x4a4a44);
         hem.intensity = lightMode ? 2.7 : 1.5;
         glowMat.opacity = lightMode ? 0.65 : 0.4;
       };
@@ -331,7 +445,7 @@ export function MuseumScene({
       const visit = (i: number) => {
         tour = (i + works.length) % works.length;
         const a = angleFor(tour, works.length);
-        const distance = camera.aspect < 0.8 ? 6.8 : 5.7;
+        const distance = camera.aspect < 0.8 ? 5.6 : 4.5;
         targetPos.set(
           Math.sin(a) * (radius - distance),
           2.7,
@@ -487,7 +601,10 @@ export function MuseumScene({
       intersection.observe(el);
       const draw = (time: number) => {
         frame = requestAnimationFrame(draw);
-        if (!visible || document.hidden || time - last < 25) return;
+        if (!visible || document.hidden || suspendedRef.current) {
+          last = time;
+          return;
+        }
         const dt = Math.min(0.05, (time - last) / 1000);
         last = time;
         if (keys.has("w") || keys.has("ArrowUp")) move(dt * 3);
@@ -499,13 +616,19 @@ export function MuseumScene({
           yaw += (keys.has("ArrowLeft") ? 1 : -1) * dt;
           aim();
         }
-        const ease = reduced.matches ? 1 : 1 - Math.exp(-dt * 7);
+        const ease =
+          reduced.matches || frozen.current ? 1 : 1 - Math.exp(-dt * 7);
         camera.position.lerp(targetPos, ease);
         looking.lerp(targetLook, ease);
         camera.lookAt(looking);
-        if (!frozen.current && !reduced.matches) dust.rotation.y += dt * 0.025;
+
         renderer.render(scene, camera);
       };
+      if (innerWidth < 700 && initialIndex === undefined) {
+        visit(0);
+        camera.position.copy(targetPos);
+        looking.copy(targetLook);
+      }
       draw(0);
       if (initialIndex !== undefined && works[initialIndex]) {
         command.current({ type: "visit", index: initialIndex });
@@ -532,10 +655,13 @@ export function MuseumScene({
       };
     }
     setup().catch(() => {
-      if (!disposed)
+      if (!disposed) {
+        setFallback(true);
+        setReady(true);
         setStatus(
           "3D is unavailable on this device. Use Index to explore every work.",
         );
+      }
       cleanup();
     });
     return () => {
@@ -554,26 +680,33 @@ export function MuseumScene({
         role="region"
         aria-label="Interactive 3D museum. Drag to look. W A S D or arrows to move. Home for overview. Enter to open the selected work."
       />
+      {!ready && (
+        <div className="museum-loading" role="status">
+          <div className="loading-orbit" />
+          <p>Taking your place.</p>
+          <span>{status}</span>
+        </div>
+      )}
       {fallback && (
         <div
           className="museum-image-fallback"
           aria-label="Artwork image fallback"
         >
-          {works.map((work) => (
+          {works.slice(0, 3).map((work) => (
             <Image
               key={work.id}
               src={work.image}
               alt={work.alt}
               width={work.width}
               height={work.height}
-              unoptimized
+              sizes="30vw"
             />
           ))}
         </div>
       )}
       <div className="museum-identity">
-        <span className="eyebrow">THE INNER WORLD</span>
-        <p>{overview ? "A collection in orbit." : works[active]?.title}</p>
+        <span className="eyebrow">EDGAR ACOSTA / PRIVATE VIEW</span>
+        <p>{overview ? "A collection in orbit." : workTitle(works[active])}</p>
         <span>{String(works.length).padStart(2, "0")} works / one space</span>
       </div>
       <div className="museum-compass" aria-label="Collection map">
@@ -582,8 +715,8 @@ export function MuseumScene({
           return (
             <button
               key={w.id}
-              aria-label={`Walk to ${w.title}`}
-              title={w.title}
+              aria-label={`Walk to ${workTitle(w)}`}
+              title={workTitle(w)}
               style={{
                 left: `${(50 + Math.sin(a) * 39).toFixed(3)}%`,
                 top: `${(50 - Math.cos(a) * 39).toFixed(3)}%`,
@@ -593,24 +726,42 @@ export function MuseumScene({
             />
           );
         })}
-        <span>E↗</span>
+        <span aria-hidden="true">E.</span>
       </div>
-      {status && (
+      {ready && status && (
         <p className="museum-status" role="status">
           {status}
         </p>
       )}
       <div className="museum-navigation">
         <div className="museum-work-stepper">
-          <button aria-label="Visit previous artwork" onClick={()=>send({type:"visit",index:(active-1+works.length)%works.length})}>←</button>
-          <button aria-label="Visit next artwork" onClick={()=>send({type:"visit",index:(active+1)%works.length})}>→</button>
+          <button
+            aria-label="Visit previous artwork"
+            onClick={() =>
+              send({
+                type: "visit",
+                index: (active - 1 + works.length) % works.length,
+              })
+            }
+          >
+            <ArrowLeft size={18} />
+          </button>
+          <button
+            aria-label="Visit next artwork"
+            onClick={() =>
+              send({ type: "visit", index: (active + 1) % works.length })
+            }
+          >
+            <ArrowRight size={18} />
+          </button>
         </div>
         <button
+          className="museum-room-toggle"
           onClick={() =>
             send({ type: overview ? "visit" : "overview", index: active })
           }
         >
-          {overview ? "Enter the gallery ↗" : "View entire space ⊙"}
+          {overview ? "Enter the gallery ↗" : "Room overview ⊙"}
         </button>
         <label className="museum-select">
           Visit a work
@@ -623,36 +774,38 @@ export function MuseumScene({
           >
             {works.map((w, i) => (
               <option key={w.id} value={i}>
-                {String(i + 1).padStart(2, "0")} / {w.title}
+                {String(i + 1).padStart(2, "0")} / {workTitle(w)}
               </option>
             ))}
           </select>
         </label>
-        <button onClick={() => open.current(active)}>View work ↗</button>
+        <button className="museum-open" onClick={() => open.current(active)}>
+          View work ↗
+        </button>
       </div>
       <div className="museum-foot">
-        <span>DRAG TO LOOK · ARROWS / WASD TO WANDER</span>
+        <span>DRAG TO LOOK · TAP A WORK TO EXPLORE</span>
         <div className="museum-step">
           <button aria-label="Turn left" onClick={() => send({ type: "left" })}>
-            ↶
+            <RotateCcw size={17} />
           </button>
           <button
             aria-label="Move forward"
             onClick={() => send({ type: "forward" })}
           >
-            ↑
+            <ArrowUp size={17} />
           </button>
           <button
             aria-label="Move backward"
             onClick={() => send({ type: "back" })}
           >
-            ↓
+            <ArrowDown size={17} />
           </button>
           <button
             aria-label="Turn right"
             onClick={() => send({ type: "right" })}
           >
-            ↷
+            <RotateCw size={17} />
           </button>
         </div>
         <button

@@ -7,6 +7,7 @@ export default defineConfig([
   globalIgnores([
     ".next/**",
     ".next-test/**",
+    ".next-check/**",
     ".pnpm-store/**",
     ".feni-data/**",
     "next-env.d.ts",

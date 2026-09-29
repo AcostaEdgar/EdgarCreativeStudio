@@ -9,12 +9,18 @@ export function WorldScene({
   hero,
   paused,
   active = 1,
+  onReady,
 }: {
   hero: Media[];
   paused: boolean;
   active?: number;
+  onReady?: () => void;
 }) {
   const host = useRef<HTMLDivElement>(null);
+  const readyRef = useRef(onReady);
+  useEffect(() => {
+    readyRef.current = onReady;
+  }, [onReady]);
   const pauseRef = useRef(paused);
   const activeRef = useRef(active);
   useEffect(() => {
@@ -29,6 +35,11 @@ export function WorldScene({
     let disposed = false;
     let cleanup = () => {};
     async function setup() {
+      if (!hero.length || hero.some((item) => item.kind === "video")) {
+        element!.dataset.state = "fallback";
+        readyRef.current?.();
+        return;
+      }
       const THREE = await import("three");
       if (disposed || !element) return;
       let renderer: InstanceType<typeof THREE.WebGLRenderer>;
@@ -40,6 +51,7 @@ export function WorldScene({
         });
       } catch {
         element.dataset.state = "fallback";
+        readyRef.current?.();
         return;
       }
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
@@ -56,7 +68,11 @@ export function WorldScene({
       const loader = new THREE.TextureLoader();
       const paths = hero;
       const textures = await Promise.all(
-        paths.map((p) => loader.loadAsync(p.url)),
+        paths.map((p) =>
+          loader.loadAsync(
+            `/_next/image?url=${encodeURIComponent(p.url)}&w=1080&q=80`,
+          ),
+        ),
       );
       if (disposed) {
         textures.forEach((t) => t.dispose());
@@ -82,7 +98,10 @@ export function WorldScene({
           map: texture,
           side: THREE.DoubleSide,
         });
-        const mesh = new THREE.Mesh(new THREE.PlaneGeometry(3.24, 4.32), material);
+        const mesh = new THREE.Mesh(
+          new THREE.PlaneGeometry(3.24, 4.32),
+          material,
+        );
         scene.add(mesh);
         return mesh;
       });
@@ -95,16 +114,17 @@ export function WorldScene({
         dragging = false,
         previousX = 0,
         drag = 0;
-      let displayed = 1,
+      let displayed = -1,
         fade = 1;
       const reduced = matchMedia("(prefers-reduced-motion: reduce)");
       let width = 1,
         height = 1;
       const render = (time: number) => {
+        const dt = Math.min(0.05, Math.max(0.001, (time - last) / 1000));
         const narrow = window.innerWidth < 700;
         const motion = !reduced.matches && !pauseRef.current;
         if (displayed !== activeRef.current) {
-          fade = motion ? Math.max(0, fade - 0.12) : 0;
+          fade = motion ? Math.max(0, fade - dt * 7) : 0;
           if (fade === 0) {
             displayed = activeRef.current;
             const indices = [
@@ -117,7 +137,7 @@ export function WorldScene({
               card.material.map = textures[indices[i]];
             });
           }
-        } else fade = motion ? Math.min(1, fade + 0.08) : 1;
+        } else fade = motion ? Math.min(1, fade + dt * 7) : 1;
         cards.forEach((card) => {
           card.material.transparent = fade < 1;
           card.material.opacity = fade;
@@ -134,14 +154,17 @@ export function WorldScene({
                 ),
               )
             : 0;
-        progress += (target - progress) * 0.09;
+        progress += (target - progress) * (1 - Math.exp(-dt * 12));
         const spread = narrow ? 2.25 : 3.8;
-        const bases = [
-          [-spread, 0.12, -1.2],
-          [0, 0.25, 1],
-          [spread, -0.15, -0.4],
-          [spread * 1.9, 0.4, -2.4],
-        ];
+        const bases =
+          cards.length === 1
+            ? [[0, 0.25, 1]]
+            : [
+                [-spread, 0.12, -1.2],
+                [0, 0.25, 1],
+                [spread, -0.15, -0.4],
+                [spread * 1.9, 0.4, -2.4],
+              ];
         cards.forEach((card, i) => {
           const [x, y, z] = bases[i];
           card.position.set(
@@ -155,10 +178,13 @@ export function WorldScene({
             (i === 1 ? 0.035 : i < 1 ? -0.045 : 0.055) * (1 - progress);
         });
         camera.position.x +=
-          ((motion ? targetX * 0.32 : 0) + drag - camera.position.x) * 0.035;
+          ((motion ? targetX * 0.32 : 0) + drag - camera.position.x) *
+          (1 - Math.exp(-dt * 9));
         camera.position.y +=
-          ((motion ? -targetY * 0.18 : 0) - camera.position.y) * 0.035;
-        camera.position.z = (narrow ? 12.8 : 10.7) - progress * 7.35;
+          ((motion ? -targetY * 0.18 : 0) - camera.position.y) *
+          (1 - Math.exp(-dt * 9));
+        camera.position.z =
+          (narrow ? 11.6 : 10.7) - progress * (narrow ? 3.2 : 7.35);
         camera.lookAt(0, 0.15, 0);
         renderer.render(scene, camera);
       };
@@ -224,12 +250,23 @@ export function WorldScene({
       renderer.domElement.addEventListener("webglcontextlost", loss);
       const animate = (time: number) => {
         frame = requestAnimationFrame(animate);
-        if (!visible || document.hidden || time - last < 30) return;
-        last = time;
+        if (!visible || document.hidden) {
+          last = time;
+          return;
+        }
+        if (
+          (reduced.matches || pauseRef.current) &&
+          displayed === activeRef.current &&
+          fade === 1 &&
+          time - last < 150
+        )
+          return;
         render(time);
+        last = time;
       };
       resize();
       element.dataset.state = "ready";
+      readyRef.current?.();
       frame = requestAnimationFrame(animate);
       cleanup = () => {
         cancelAnimationFrame(frame);
@@ -241,7 +278,10 @@ export function WorldScene({
         element.removeEventListener("pointercancel", up);
         element.removeEventListener("keydown", key);
         renderer.domElement.removeEventListener("webglcontextlost", loss);
-        cards.forEach((c) => { c.geometry.dispose(); c.material.dispose(); });
+        cards.forEach((c) => {
+          c.geometry.dispose();
+          c.material.dispose();
+        });
         textures.forEach((t) => t.dispose());
         renderer.dispose();
         renderer.domElement.remove();
@@ -249,6 +289,7 @@ export function WorldScene({
     }
     setup().catch(() => {
       if (element) element.dataset.state = "fallback";
+      readyRef.current?.();
     });
     return () => {
       disposed = true;
@@ -260,23 +301,34 @@ export function WorldScene({
       ref={host}
       className="world-scene"
       role="img"
-      aria-label="Four works by Edgar Acosta floating in space. Move the pointer or drag to change perspective; use arrow keys when focused."
+      aria-label="Works by Edgar Acosta floating in space. Drag or use arrow keys to change perspective."
       tabIndex={0}
       data-state="loading"
     >
       <div className="scene-fallback" aria-hidden="true">
-        {[...new Set([(active + hero.length - 1) % hero.length, active % hero.length, (active + 1) % hero.length])].map((index) => (
-          <Image
-            key={index}
-            src={hero[index].url}
-            alt=""
-            width={hero[index].width}
-            height={hero[index].height}
-            quality={80}
-            loading={index === active ? "eager" : "lazy"}
-            fetchPriority={index === active ? "high" : "auto"}
-          />
-        ))}
+        {hero.length > 0 &&
+          [
+            ...new Set([
+              (active + hero.length - 1) % hero.length,
+              active % hero.length,
+              (active + 1) % hero.length,
+            ]),
+          ]
+            .filter((index) => hero[index]?.kind === "image")
+            .map((index) => (
+              <Image
+                key={index}
+                src={hero[index].url}
+                alt=""
+                width={hero[index].width}
+                height={hero[index].height}
+                quality={80}
+                sizes="(max-width:700px) 60vw, 35vw"
+                onLoad={() => readyRef.current?.()}
+                loading={index === active ? "eager" : "lazy"}
+                fetchPriority={index === active ? "high" : "auto"}
+              />
+            ))}
       </div>
     </div>
   );
