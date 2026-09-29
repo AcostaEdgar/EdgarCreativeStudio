@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { adminConfigured, checkAdminPassword, clearLoginFailures, createSession, loginAllowed, recordLoginFailure, retryMinutes, sameOrigin } from "@/lib/admin";
+import { adminConfigured, adminHashInfo, checkAdminPassword, clearLoginFailures, createSession, loginAllowed, recordLoginFailure, retryMinutes, sameOrigin } from "@/lib/admin";
 export async function POST(request: Request) {
   if (!sameOrigin(request)) return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
@@ -14,4 +14,7 @@ export async function POST(request: Request) {
   const response = NextResponse.json({ ok: true });
   response.cookies.set("edgar_admin", createSession(), { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", maxAge: 604800, path: "/" });
   return response;
+}
+export async function GET() {
+  return NextResponse.json(adminHashInfo(), { headers: { "Cache-Control": "no-store" } });
 }

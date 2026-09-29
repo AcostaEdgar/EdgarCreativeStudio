@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { compare } from "bcryptjs";
 
-const loginAttempts = new Map<string, { count: number; until: number }>();
+const loginAttempts = new Map<string, { count: number; until: number; last: number }>();
 const week = 7 * 24 * 60 * 60 * 1000;
 
 function secret() {
@@ -35,8 +35,9 @@ export function retryMinutes(ip: string) {
 export function recordLoginFailure(ip: string) {
   const now = Date.now();
   const current = loginAttempts.get(ip);
-  const count = current && current.until > now ? current.count + 1 : 1;
-  loginAttempts.set(ip, { count, until: now + (count >= 5 ? 15 * 60_000 : 60_000) });
+  // Wrong tries count toward a lock only when they happen within 15 minutes of each other.
+  const count = current && now - current.last < 15 * 60_000 ? current.count + 1 : 1;
+  loginAttempts.set(ip, { count, last: now, until: count >= 5 ? now + 15 * 60_000 : 0 });
 }
 
 export function clearLoginFailures(ip: string) {
@@ -61,6 +62,17 @@ export function validSession(token: string | undefined) {
   const payload = `${match[1]}.${match[2]}`;
   const expected = Buffer.from(crypto.createHmac("sha256", key).update(payload).digest("hex"), "hex");
   return crypto.timingSafeEqual(expected, Buffer.from(match[3], "hex"));
+}
+
+// Safe diagnostics: shape and short fingerprint of the configured hash, never the hash itself.
+export function adminHashInfo() {
+  const hash = process.env.ADMIN_PASSWORD_HASH?.trim() || "";
+  return {
+    configured: adminConfigured(),
+    hashLooksValid: /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/.test(hash),
+    hashLength: hash.length,
+    fingerprint: hash ? crypto.createHash("sha256").update(hash).digest("hex").slice(0, 8) : null,
+  };
 }
 
 export function sameOrigin(request: Request) {
