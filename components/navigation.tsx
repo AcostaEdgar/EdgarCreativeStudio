@@ -25,7 +25,7 @@ export function Navigation({ home = false }: { home?: boolean }) {
       >
         <Link className="experience-logo" href="/" aria-label={brand.name}>
           edgar<span>studio</span>
-          <sup>↗</sup>
+          <sup><ArrowUpRight size={18} strokeWidth={2} aria-hidden="true" /></sup>
           <small>{brand.byline}</small>
         </Link>
         <p className="nav-descriptor">

@@ -11,6 +11,7 @@ import type { Work } from "@/lib/art";
 import { brand } from "@/lib/brand";
 import "../experience/experience.css";
 import "../experience/art-direction.css";
+import "./mobile-gallery.css";
 
 export function StudioGallery({
   works,
