@@ -5,11 +5,11 @@ import Link from "next/link";
 import { Navigation } from "../navigation";
 import { Footer } from "../footer";
 import { MuseumScene } from "./museum-scene";
-import { works } from "@/lib/art";
+import type { Work } from "@/lib/art";
 import { brand } from "@/lib/brand";
 import "../experience/experience.css";
 
-export function StudioGallery({initialWork}:{initialWork?:string}){
+export function StudioGallery({works,initialWork}:{works:Work[];initialWork?:string}){
  const initial=works.findIndex(w=>String(w.id)===initialWork);
  const [view,setView]=useState("space"),[selected,setSelected]=useState(Math.max(0,initial)),[share,setShare]=useState("");
  const dialog=useRef<HTMLDialogElement>(null);

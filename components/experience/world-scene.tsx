@@ -2,13 +2,15 @@
 
 import { useEffect, useRef } from "react";
 import Image from "next/image";
-import slots from "@/content/home-media.json";
+import type { Media } from "@/lib/studio-state";
 
 /** The original perspective-card entrance, using Edgar's portfolio. */
 export function WorldScene({
+  hero,
   paused,
   active = 1,
 }: {
+  hero: Media[];
   paused: boolean;
   active?: number;
 }) {
@@ -52,7 +54,7 @@ export function WorldScene({
       const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 80);
       camera.position.set(0, 0, 11);
       const loader = new THREE.TextureLoader();
-      const paths = slots.hero;
+      const paths = hero;
       const textures = await Promise.all(
         paths.map((p) => loader.loadAsync(p.url)),
       );
@@ -106,10 +108,10 @@ export function WorldScene({
           if (fade === 0) {
             displayed = activeRef.current;
             const indices = [
-              (displayed + 3) % 4,
-              displayed,
-              (displayed + 1) % 4,
-              (displayed + 2) % 4,
+              (displayed + 3) % textures.length,
+              displayed % textures.length,
+              (displayed + 1) % textures.length,
+              (displayed + 2) % textures.length,
             ];
             cards.forEach((card, i) => {
               card.material.map = textures[indices[i]];
@@ -252,7 +254,7 @@ export function WorldScene({
       disposed = true;
       cleanup();
     };
-  }, []);
+  }, [hero]);
   return (
     <div
       ref={host}
@@ -263,13 +265,13 @@ export function WorldScene({
       data-state="loading"
     >
       <div className="scene-fallback" aria-hidden="true">
-        {[(active + 3) % 4, active, (active + 1) % 4].map((index) => (
+        {[...new Set([(active + hero.length - 1) % hero.length, active % hero.length, (active + 1) % hero.length])].map((index) => (
           <Image
             key={index}
-            src={slots.hero[index].url}
+            src={hero[index].url}
             alt=""
-            width={slots.hero[index].width}
-            height={slots.hero[index].height}
+            width={hero[index].width}
+            height={hero[index].height}
             quality={80}
             loading={index === active ? "eager" : "lazy"}
             fetchPriority={index === active ? "high" : "auto"}
