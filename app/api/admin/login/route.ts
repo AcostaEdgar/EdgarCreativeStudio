@@ -1,9 +1,16 @@
 import { NextResponse } from "next/server";
-import { adminPassword, createSession } from "@/lib/admin";
+import { adminConfigured, checkAdminPassword, clearLoginFailures, createSession, loginAllowed, recordLoginFailure, sameOrigin } from "@/lib/admin";
 export async function POST(request: Request) {
+  if (!sameOrigin(request)) return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
+  if (!loginAllowed(ip)) return NextResponse.json({ error: "Too many attempts. Try again in 15 minutes." }, { status: 429 });
   const body = await request.json().catch(() => ({}));
-  if (!adminPassword()) return NextResponse.json({ error: "Online editing is not connected yet. Use your local studio workspace to update the collection." }, { status: 503 });
-  if (body.password !== adminPassword()) return NextResponse.json({ error: "Incorrect password." }, { status: 401 });
+  if (!adminConfigured()) return NextResponse.json({ error: "Owner access is not configured yet." }, { status: 503 });
+  if (typeof body.password !== "string" || !await checkAdminPassword(body.password)) {
+    recordLoginFailure(ip);
+    return NextResponse.json({ error: "Incorrect password." }, { status: 401 });
+  }
+  clearLoginFailures(ip);
   const response = NextResponse.json({ ok: true });
   response.cookies.set("edgar_admin", createSession(), { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", maxAge: 604800, path: "/" });
   return response;

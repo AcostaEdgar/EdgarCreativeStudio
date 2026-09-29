@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { validSession } from "@/lib/admin";
+import { sameOrigin, validSession } from "@/lib/admin";
 import fs from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
@@ -9,6 +9,8 @@ import type homeDefaults from "@/content/home-media.json";
 
 async function save(name: string, value: unknown) { await fs.writeFile(path.join(process.cwd(), "content", name), JSON.stringify(value, null, 2) + "\n"); }
 export async function POST(request: Request) {
+  if (process.env.VERCEL) return NextResponse.json({ error: "Hosted uploads go directly to Blob storage." }, { status: 410 });
+  if (!sameOrigin(request)) return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
   if (!validSession((await cookies()).get("edgar_admin")?.value)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const form = await request.formData();
   const portfolio: typeof portfolioDefaults = JSON.parse(await fs.readFile(path.join(process.cwd(), "content/portfolio.json"), "utf8"));

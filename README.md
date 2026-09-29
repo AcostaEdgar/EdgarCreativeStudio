@@ -8,10 +8,18 @@ Brand settings: `lib/brand.ts`. Published Edgar portfolio assets: `public/media`
 
 The restored ink-motion section is local and can be replaced with Edgar-owned footage later. Contact email: `contact@edgaracosta.com`.
 
-For local admin, set `ADMIN_PASSWORD` in `.env.local`, then open http://127.0.0.1:3000/admin. The local session is intentionally in-memory and resets when the dev server restarts. Multiple selected image files are optimized to WebP, added to the portfolio and collage, and can be added to the four-image entrance hero. The writing sample is stored in `content/writing.json`. The production version should replace this local filesystem adapter with owner authentication and Vercel Blob before launch.
+## Owner admin (`/admin`)
 
-## Deployment (owner setup)
+- **Local:** set `ADMIN_PASSWORD` in `.env.local`. Without a Blob token, uploads are optimized to WebP in `public/media` and content is written to `content/*.json`.
+- **Hosted (Vercel):** requires `ADMIN_PASSWORD_HASH` (bcrypt), `AUTH_SECRET`, and a connected **public** Vercel Blob store (`BLOB_READ_WRITE_TOKEN`, or `Blob2_READ_WRITE_TOKEN` for a store connected with that prefix). Images upload straight from the browser to Blob; portfolio, hero, and writing state live in `studio/state.json` in Blob. The home page and showroom read that state and are revalidated on every publish. If the state file does not exist yet, the committed `content/*.json` defaults are shown.
+- Sessions are HMAC-signed cookies (7 days); login is rate-limited.
 
-Connect a GitHub repository, import it in Vercel, and enable automatic Preview deployments for pull requests. No Git remote or Vercel project is configured in this checkout yet.
+Generate a password hash locally:
 
-For subsequent phases: connect Vercel Blob; add ADMIN_EMAIL (or ADMIN_PASSWORD_HASH), AUTH_SECRET, RESEND_API_KEY, CONTACT_TO_EMAIL, BUTTONDOWN_API_KEY, TURNSTILE_SITE_KEY, TURNSTILE_SECRET_KEY, NEXT_PUBLIC_SITE_URL=https://edgaracosta.com. Keep values out of Git. Add edgaracosta.com and www with www redirected to apex, verify the sending domain in Resend, and enable Vercel Analytics. These integrations are not implemented in Phase 1.
+```
+node -e "require('bcryptjs').hash(process.argv[1],12).then(console.log)" 'your-password'
+```
+
+## Deployment
+
+GitHub `main` is the production branch; Vercel deploys it automatically. Keep secrets in Vercel's environment variables, never in Git. Add `edgaracosta.com` and `www` in Vercel (www redirects to apex) and preserve existing MX/TXT email records at the DNS provider.

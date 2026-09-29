@@ -3,10 +3,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRef,useState } from "react";
 import { ArrowUpRight,Grid2X2,Search,X } from "lucide-react";
-import { works } from "@/lib/art";
+import type { Work } from "@/lib/art";
 import "./experience/discover.css";
 
-export function PortfolioTiles(){
+export function PortfolioTiles({works}:{works:Work[]}){
  const [large,setLarge]=useState(false),[search,setSearch]=useState(false),[query,setQuery]=useState("");
  const [revealed,setRevealed]=useState<number|null>(null);
  const touch=useRef(false);
