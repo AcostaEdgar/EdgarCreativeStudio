@@ -107,6 +107,22 @@ try {
   ];
   state = (await call("/api/admin/save", { order })).d;
   assert.equal(state.portfolio[0].id, work.id);
+  state = (
+    await call("/api/admin/save", {
+      move: {
+        id: work.id,
+        beforeId: null,
+        position: state.portfolio.length - 1,
+      },
+    })
+  ).d;
+  assert.equal(state.portfolio.at(-1).id, work.id);
+  state = (
+    await call("/api/admin/save", {
+      move: { id: work.id, beforeId: state.portfolio[0].id, position: 0 },
+    })
+  ).d;
+  assert.equal(state.portfolio[0].id, work.id);
   state = (await call("/api/admin/save", { heroIds: [work.id] })).d;
   assert.equal(state.home.hero[0].url, work.image);
   const replace = new FormData();
@@ -177,7 +193,10 @@ try {
   console.error(logs.slice(-1500));
   throw e;
 } finally {
-  if(child.exitCode===null){child.kill("SIGTERM");await new Promise((r) => child.once("exit", r));}
+  if (child.exitCode === null) {
+    child.kill("SIGTERM");
+    await new Promise((r) => child.once("exit", r));
+  }
   if (before) await fs.writeFile(stateFile, before);
   else await fs.unlink(stateFile).catch(() => {});
   for (const f of await fs.readdir("public/media"))

@@ -256,7 +256,10 @@ export function AdminWorkspace() {
     const index = order.indexOf(id);
     order.splice(index, 1);
     order.splice(position, 0, id);
-    await save({ order }, "Collection order saved.");
+    await save(
+      { move: { id, beforeId: order[position + 1] ?? null, position } },
+      "Collection order saved.",
+    );
   }
   const heroes = state?.home.hero.map((h) => Number(h.id)) || [];
   return (

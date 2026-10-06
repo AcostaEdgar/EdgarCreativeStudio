@@ -8,7 +8,7 @@ export async function GET() {
   try {
     return NextResponse.json(
       {
-        ...(await readStudioState()),
+        ...(await readStudioState({ fresh: true })),
         storage: hostedStorageReady() ? "blob" : "local",
       },
       { headers: { "Cache-Control": "no-store" } },

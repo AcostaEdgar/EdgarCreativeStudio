@@ -1,9 +1,11 @@
 import { authorize, publish } from "@/lib/admin-mutation";
+import { moveWork } from "@/lib/portfolio-order";
 export async function POST(request: Request) {
   const denied = await authorize(request);
   if (denied) return denied;
   const body = await request.json().catch(() => ({}));
   return publish((state) => {
+    if (body.move) state.portfolio = moveWork(state.portfolio, body.move);
     if (body.order) {
       if (
         !Array.isArray(body.order) ||
