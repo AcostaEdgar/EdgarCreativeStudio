@@ -23,3 +23,4 @@ test-results/
 
 .next-check/
 .next-review/
+.artist-state.json*

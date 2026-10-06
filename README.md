@@ -1,25 +1,29 @@
-# Edgar Creative Studio
+# Edgar Studio
 
-Personal portfolio and creative studio for Edgar Acosta. The immersive entrance, motion interlude, aligned tile field, and interactive 3D showroom are preserved. `/admin` is the local owner workspace for adding work, updating the entrance hero, and saving a writing sample.
+Photographic portfolio for edgaracosta.com. A full-screen photographic entrance flows into a dense four-column contact sheet (two columns on phones). Each image opens uncropped. Bold studio typography, restrained scroll depth, and the halftone cursor frame the work. Contact and Studio Login are in the footer.
 
-Run `pnpm install`, then `pnpm dev`. Preview at http://127.0.0.1:3000. Validate with `pnpm lint`, `pnpm typecheck`, `pnpm build`.
+## Run and validate
 
-Brand settings: `lib/brand.ts`. Published Edgar portfolio assets: `public/media`. Content: `content/portfolio.json`, `content/home-media.json`. Twelve previously published works were migrated; camera filenames were replaced by Untitled + year. Original files and the private legacy database remain excluded from Git and unused by the app. The homepage uses the restored tilted-card entrance, scroll-driven motion section, aligned tile field, and the 3D showroom at `/gallery`.
+Run `pnpm install`, then `pnpm dev`. Validate with `pnpm lint`, `pnpm typecheck`, and `pnpm build`.
+Run `node scripts/admin-smoke.mjs` for the isolated local admin lifecycle test. It creates temporary test data, restores prior local state, and never changes hosted credentials or content.
 
-The restored ink-motion section is local and can be replaced with Edgar-owned footage later. Contact email: `contact@edgaracosta.com`.
+## Content and owner access
 
-## Owner admin (`/admin`)
+The October 2026 selection contains 111 photographs from Edgar's supplied Desktop/Portfolio folder. High-quality WebP copies, up to 3200px on the long edge, live in `public/portfolio`; source originals remain untouched. Filenames are never used as artwork titles.
 
-- **Local:** set `ADMIN_PASSWORD` in `.env.local`. Without a Blob token, uploads are optimized to WebP in `public/media` and content is written to `content/*.json`.
-- **Hosted (Vercel):** requires `ADMIN_PASSWORD_HASH` (bcrypt), `AUTH_SECRET`, and a connected **public** Vercel Blob store (`BLOB_READ_WRITE_TOKEN`, or `Blob2_READ_WRITE_TOKEN` for a store connected with that prefix). Images upload straight from the browser to Blob; portfolio, hero, and writing state live in `studio/state.json` in Blob. The home page and showroom read that state and are revalidated on every publish. If the state file does not exist yet, the committed `content/*.json` defaults are shown.
-- Sessions are HMAC-signed cookies (7 days); login is rate-limited.
+Open `/admin` using the existing password. The workspace supports:
+- Multiple image uploads, individual descriptions and optional titles, progress, and retry without repeating completed uploads.
+- Image metadata editing, replacement, removal, and ordered positions.
+- One full-screen hero photograph, published by selecting it.
 
-Generate a password hash locally:
+Hosted uploads go directly to Vercel Blob (multipart for large files); the admin registers each successful upload separately. Optimistic ETag writes prevent concurrent changes from silently overwriting one another. Every public request reads current collection state. Remove clears both the portfolio and opening-image references. Removing from the website retains the original Blob file, allowing manual recovery rather than irreversible destruction.
 
-```
-node -e "require('bcryptjs').hash(process.argv[1],12).then(console.log)" 'your-password'
-```
+**Storage:** `studio/artist-state-v2.json` in the existing public Blob store. The old `studio/state.json` is retained separately for recovery and is not used by the new site. Until the new state is first saved, the site uses committed `content/portfolio.json`, `content/home-media.json`, and `content/writing.json` defaults. An intentionally empty saved collection remains empty; old defaults do not reappear.
+
+**Authentication:** existing `ADMIN_PASSWORD_HASH` and `AUTH_SECRET` remain unchanged. Existing `BLOB_READ_WRITE_TOKEN` or `Blob2_READ_WRITE_TOKEN` is reused. Sessions remain signed, httpOnly, seven-day cookies. Locally, `ADMIN_PASSWORD` is supported; local state is kept in ignored `.artist-state.json` with atomic writes. Never commit credentials.
+
+**Inquiries:** direct email to contact@edgaracosta.com and telephone +1 470 931 2900. Artwork inquiries include a link to the chosen image. No categories, biography, public writing section, checkout, or fabricated credentials.
 
 ## Deployment
 
-GitHub `main` is the production branch; Vercel deploys it automatically. Keep secrets in Vercel's environment variables, never in Git. Add `edgaracosta.com` and `www` in Vercel (www redirects to apex) and preserve existing MX/TXT email records at the DNS provider.
+GitHub `main` deploys automatically to the existing Vercel project `edgar-studio-publish`. Domain: edgaracosta.com. No new services or password changes are required. Retained legacy source components are not imported by the public routes; the site no longer loads Three.js or autoplay audio.

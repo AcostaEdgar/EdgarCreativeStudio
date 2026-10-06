@@ -1,8 +1,25 @@
-import type { Metadata } from "next";
-import { StudioGallery } from "@/components/gallery/studio-gallery";
 import { readStudioState } from "@/lib/studio-state";
-export const metadata:Metadata={title:"The showroom",description:"Walk through Edgar Acosta’s complete portfolio in an interactive 3D gallery."};
-export default async function GalleryPage({searchParams}:{searchParams:Promise<{work?:string}>}){
- const [{work},{portfolio}]=await Promise.all([searchParams,readStudioState()]);
- return <StudioGallery works={portfolio} initialWork={work}/>;
+import { ArtistHome } from "@/components/artist-home";
+export const dynamic = "force-dynamic";
+export const metadata = {
+  title: "Photographs",
+  description: "The photographic portfolio of Edgar Acosta.",
+  alternates: { canonical: "/gallery" },
+};
+export default async function Gallery({
+  searchParams,
+}: {
+  searchParams: Promise<{ work?: string }>;
+}) {
+  const [state, { work }] = await Promise.all([
+    readStudioState(),
+    searchParams,
+  ]);
+  return (
+    <ArtistHome
+      works={state.portfolio}
+      hero={state.home.hero}
+      initialWork={work}
+    />
+  );
 }

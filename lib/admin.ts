@@ -77,5 +77,13 @@ export function adminHashInfo() {
 
 export function sameOrigin(request: Request) {
   const origin = request.headers.get("origin");
-  return !origin || origin === new URL(request.url).origin;
+  if (!origin) return true;
+  try {
+    const parsed = new URL(origin);
+    if (!["http:", "https:"].includes(parsed.protocol)) return false;
+    // Next can normalize request.url to localhost internally. The incoming Host
+    // is the address used by the browser, including custom domains and dev ports.
+    return parsed.origin === new URL(request.url).origin ||
+      parsed.host === request.headers.get("host");
+  } catch { return false; }
 }

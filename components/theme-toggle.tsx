@@ -5,7 +5,7 @@ const subscribe = (update: () => void) => {
   window.addEventListener("edgar-theme", update);
   const storage = (event: StorageEvent) => {
     if (
-      event.key === "edgar-theme" &&
+      event.key === "edgar-artist-theme" &&
       (event.newValue === "light" || event.newValue === "dark")
     ) {
       document.documentElement.dataset.theme = event.newValue;
@@ -18,9 +18,9 @@ const subscribe = (update: () => void) => {
     window.removeEventListener("storage", storage);
   };
 };
-const snapshot = () => document.documentElement.dataset.theme || "dark";
+const snapshot = () => document.documentElement.dataset.theme || "light";
 export function ThemeToggle() {
-  const theme = useSyncExternalStore(subscribe, snapshot, () => "dark");
+  const theme = useSyncExternalStore(subscribe, snapshot, () => "light");
   return (
     <button
       className="theme-toggle"
@@ -30,7 +30,7 @@ export function ThemeToggle() {
         const next = theme === "dark" ? "light" : "dark";
         document.documentElement.dataset.theme = next;
         try {
-          localStorage.setItem("edgar-theme", next);
+          localStorage.setItem("edgar-artist-theme", next);
         } catch {}
         window.dispatchEvent(new Event("edgar-theme"));
       }}

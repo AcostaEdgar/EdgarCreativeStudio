@@ -1,12 +1,8 @@
 import type { Metadata } from "next";
 import { Inter_Tight, Instrument_Serif, Geist_Mono } from "next/font/google";
 import { brand } from "@/lib/brand";
-import { SiteAudio } from "@/components/site-audio";
 import "./globals.css";
-import "./gallery.css";
-import "./studio.css";
-import "./portfolio.css";
-import "./refinements.css";
+import "./artist.css";
 
 const sans = Inter_Tight({
   subsets: ["latin"],
@@ -29,8 +25,16 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://edgaracosta.com"),
   title: { default: brand.name, template: `%s · ${brand.name}` },
   description: brand.description,
-  openGraph: {title: brand.name, description: brand.description, type: "website", images: [{url:"/media/work-285691003.webp",alt:"Flower filled — Edgar Acosta"}]},
-  twitter: {card:"summary_large_image",title:brand.name,description:brand.description,images:["/media/work-285691003.webp"]},
+  openGraph: {
+    title: brand.name,
+    description: brand.description,
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: brand.name,
+    description: brand.description,
+  },
 };
 export default function RootLayout({
   children,
@@ -42,13 +46,25 @@ export default function RootLayout({
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){var t;try{t=localStorage.getItem("edgar-theme")}catch(e){}document.documentElement.dataset.theme=t==="light"||t==="dark"?t:matchMedia("(prefers-color-scheme:light)").matches?"light":"dark"})()`,
+            __html: `(function(){var t;try{t=localStorage.getItem("edgar-artist-theme")}catch(e){}document.documentElement.dataset.theme=t==="dark"?"dark":"light"})()`,
           }}
         />
       </head>
       <body className={`${sans.variable} ${serif.variable} ${mono.variable}`}>
-        {children}
-        <SiteAudio />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Person",
+              name: "Edgar Acosta",
+              url: "https://edgaracosta.com",
+              jobTitle: "Artist and photographer",
+              email: "contact@edgaracosta.com",
+            }),
+          }}
+        />
+        <div id="top">{children}</div>
       </body>
     </html>
   );

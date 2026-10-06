@@ -1,108 +1,29 @@
 "use client";
 import Link from "next/link";
-import { useRef, useState } from "react";
-import { ArrowUpRight, Plus, X } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
-import { brand } from "@/lib/brand";
-
 export function Navigation({ home = false }: { home?: boolean }) {
-  const [open, setOpen] = useState(false);
-  const menu = useRef<HTMLDialogElement>(null);
-  const trigger = useRef<HTMLButtonElement>(null);
-  function closeMenu() {
-    menu.current?.close();
-    setOpen(false);
-    document.body.style.overflow = "";
-    trigger.current?.focus();
-  }
   return (
     <>
       <a className="skip" href="#main">
         Skip to content
       </a>
-      <header
-        className={home ? "experience-nav" : "experience-nav studio-nav-static"}
-      >
-        <Link className="experience-logo" href="/" aria-label={brand.name}>
+      <header className={"studio-navigation " + (home ? "over-hero" : "")}>
+        <Link
+          className="studio-wordmark"
+          href="/"
+          aria-label="Edgar Studio home"
+        >
           edgar<span>studio</span>
-          <sup><ArrowUpRight size={18} strokeWidth={2} aria-hidden="true" /></sup>
-          <small>{brand.byline}</small>
+          <ArrowUpRight size={17} />
         </Link>
-        <p className="nav-descriptor">
-          INDEPENDENT CREATIVE STUDIO.
-          <br />
-          ARTISTIC INSTINCT. COMMERCIAL INTENT.
-        </p>
         <nav aria-label="Main navigation">
-          <Link href="/gallery">
-            Gallery <ArrowUpRight size={14} />
+          <Link href={home ? "#work" : "/#work"}>Work</Link>
+          <Link href={home ? "#contact" : "/#contact"}>
+            Contact <ArrowUpRight size={14} />
           </Link>
           <ThemeToggle />
-          <button
-            ref={trigger}
-            aria-expanded={open}
-            aria-controls="studio-menu"
-            onClick={() => {
-              menu.current?.showModal();
-              setOpen(true);
-              document.body.style.overflow = "hidden";
-            }}
-          >
-            Menu <Plus size={17} />
-          </button>
         </nav>
-        <dialog
-          ref={menu}
-          id="studio-menu"
-          className="studio-menu-dialog"
-          aria-label="Explore the studio"
-          onCancel={closeMenu}
-          onClose={() => {
-            setOpen(false);
-            document.body.style.overflow = "";
-          }}
-        >
-          <div className="studio-menu-top">
-            <span>EDGAR ACOSTA / ONE POINT OF VIEW</span>
-            <button onClick={closeMenu} aria-label="Close menu">
-              Close <X size={20} />
-            </button>
-          </div>
-          <div className="studio-menu-layout">
-            <div className="studio-menu-intro">
-              <span className="menu-orbit" aria-hidden="true">
-                e.
-              </span>
-              <p>
-                Go in all the way.
-                <br />
-                Or not at all.
-              </p>
-              <a href={"mailto:" + brand.email}>{brand.email} ↗</a>
-            </div>
-            <nav aria-label="Studio destinations" className="studio-menu-links">
-              {[
-                { href: "/#work", label: "Selected work" },
-                { href: "/gallery", label: "The showroom" },
-                { href: "/writing", label: "Words & ideas" },
-                { href: "/#studio", label: "The studio" },
-                { href: "/start", label: "Start a project" },
-              ].map((item, i) => (
-                <Link key={item.href} href={item.href} onClick={closeMenu}>
-                  <small>0{i + 1}</small>
-                  <span>{item.label}</span>
-                  <ArrowUpRight />
-                </Link>
-              ))}
-            </nav>
-          </div>
-          <div className="studio-menu-bottom">
-            <span>STRATEGY · WORDS · IMAGES · DIGITAL WORLDS</span>
-            <Link href="/admin" onClick={closeMenu}>
-              Studio login ↗
-            </Link>
-          </div>
-        </dialog>
       </header>
     </>
   );

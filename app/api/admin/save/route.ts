@@ -1,63 +1,90 @@
-import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { sameOrigin, validSession } from "@/lib/admin";
-import {
-  readStudioState,
-  writeStudioState,
-  type HomeMedia,
-} from "@/lib/studio-state";
-import { revalidatePath } from "next/cache";
+import { authorize, publish } from "@/lib/admin-mutation";
 export async function POST(request: Request) {
-  if (!sameOrigin(request))
-    return NextResponse.json(
-      { error: "Invalid request origin." },
-      { status: 403 },
-    );
-  if (!validSession((await cookies()).get("edgar_admin")?.value))
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const denied = await authorize(request);
+  if (denied) return denied;
   const body = await request.json().catch(() => ({}));
-  const state = await readStudioState();
-  if (body.home !== undefined) {
-    const home = body.home as HomeMedia;
-    if (
-      !Array.isArray(home.hero) ||
-      home.hero.length < 1 ||
-      home.hero.length > 4 ||
-      home.hero.some(
-        (item) =>
-          !item.alt?.trim() ||
-          !state.portfolio.some((work) => work.image === item.url),
+  return publish((state) => {
+    if (body.order) {
+      if (
+        !Array.isArray(body.order) ||
+        new Set(body.order).size !== state.portfolio.length ||
+        body.order.length !== state.portfolio.length ||
+        body.order.some(
+          (id: number) => !state.portfolio.some((w) => w.id === id),
+        )
       )
-    ) {
-      return NextResponse.json(
-        { error: "Choose one to four portfolio images for the entrance." },
-        { status: 400 },
+        throw new Error("The collection changed. Refresh before reordering.");
+      state.portfolio = body.order.map((id: number) =>
+        state.portfolio.find((w) => w.id === id)!,
       );
     }
-    state.home = { ...state.home, hero: home.hero };
-  }
-  if (body.writing !== undefined) {
-    if (
-      !Array.isArray(body.writing) ||
-      body.writing.length > 1 ||
-      body.writing.some(
-        (item: { title?: string; body?: string }) =>
-          typeof item.title !== "string" ||
-          typeof item.body !== "string" ||
-          item.title.length > 160 ||
-          item.body.length > 50000,
-      )
-    ) {
-      return NextResponse.json(
-        { error: "Writing sample is too long or invalid." },
-        { status: 400 },
+    if (body.work) {
+      const w = state.portfolio.find((w) => w.id === body.work.id);
+      if (!w) throw new Error("Work not found. Refresh the collection.");
+      for (const key of [
+        "title",
+        "year",
+        "medium",
+        "alt",
+        "description",
+        "category",
+      ] as const) {
+        if (typeof body.work[key] === "string")
+          w[key] = body.work[key]
+            .trim()
+            .slice(0, key === "description" ? 2000 : 220);
+      }
+      if (!w.alt)
+        throw new Error("Add a short image description for accessibility.");
+      for (const key of [
+        "physicalWidth",
+        "physicalHeight",
+        "physicalDepth",
+      ] as const) {
+        const v = Number(body.work[key]);
+        w[key] = Number.isFinite(v) && v > 0 ? v : undefined;
+      }
+      w.unit = ["cm", "in", "mm"].includes(body.work.unit)
+        ? body.work.unit
+        : "cm";
+      state.home.hero = state.home.hero.map((m) =>
+        m.url === w.image ? { ...m, alt: w.alt, caption: w.title } : m,
       );
     }
-    state.writing = body.writing;
-  }
-  await writeStudioState(state);
-  revalidatePath("/");
-  revalidatePath("/gallery");
-  revalidatePath("/writing");
-  return NextResponse.json({ ok: true });
+    if (body.heroIds) {
+      if (
+        !Array.isArray(body.heroIds) ||
+        body.heroIds.length > 1 ||
+        new Set(body.heroIds).size !== body.heroIds.length
+      )
+        throw new Error("Choose one hero image.");
+      state.home.hero = body.heroIds.map((id: number) => {
+        const w = state.portfolio.find((w) => w.id === id);
+        if (!w) throw new Error("That image is no longer in the collection.");
+        return {
+          id: String(w.id),
+          kind: "image",
+          url: w.image,
+          width: w.width,
+          height: w.height,
+          alt: w.alt,
+          caption: w.title,
+        };
+      });
+    }
+    if (body.writing) {
+      if (
+        !Array.isArray(body.writing) ||
+        body.writing.length > 1 ||
+        body.writing.some(
+          (w: { title: string; body: string }) =>
+            typeof w.title !== "string" ||
+            typeof w.body !== "string" ||
+            w.body.length > 50000,
+        )
+      )
+        throw new Error("The writing could not be saved.");
+      state.writing = body.writing;
+    }
+  });
 }
