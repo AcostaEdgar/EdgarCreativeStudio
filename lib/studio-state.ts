@@ -15,6 +15,7 @@ import {
   staleVersions,
   versionPath,
   versionPrefix,
+  versionUrl,
 } from "./blob-state";
 export type { StudioState, Work, HomeMedia, Media } from "./studio-types";
 
@@ -80,8 +81,10 @@ async function readPublicCopy(token: string): Promise<StudioState | null> {
   if (Number.isSafeInteger(version) && version > 0) {
     // Two near-simultaneous saves can leave the copy one version behind.
     if (await versionExists(token, version + 1)) return null;
-    const exact = new URL(versionPath(version), meta.url).toString();
-    return { ...(await download(exact)), revision: String(version) };
+    return {
+      ...(await download(versionUrl(meta.url, version))),
+      revision: String(version),
+    };
   }
   const url = new URL(meta.url);
   url.searchParams.set("v", meta.etag.replace(/\W/g, ""));
@@ -98,7 +101,12 @@ export async function readStudioState(
   const token = blobToken();
   if (token) {
     if (!fresh) {
-      const copy = await readPublicCopy(token);
+      // A failed fast read falls back to the authoritative read below,
+      // so a storage hiccup never takes the public site down.
+      const copy = await readPublicCopy(token).catch((error) => {
+        console.error("Public collection read failed; using version list.", error);
+        return null;
+      });
       if (copy) return copy;
     }
     let latest = newestVersion(await listVersions(token));

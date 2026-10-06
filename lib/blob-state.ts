@@ -4,6 +4,10 @@ export const versionPrefix = "studio/collection/";
 export const versionPath = (version: number) =>
   `${versionPrefix}${String(version).padStart(10, "0")}.json`;
 
+/** Absolute URL of a version file in the same store as `storeUrl`. */
+export const versionUrl = (storeUrl: string, version: number) =>
+  new URL("/" + versionPath(version), storeUrl).toString();
+
 export function parseVersion(pathname: string): number | null {
   const match = /^studio\/collection\/(\d{10})\.json$/.exec(pathname);
   return match ? Number(match[1]) : null;

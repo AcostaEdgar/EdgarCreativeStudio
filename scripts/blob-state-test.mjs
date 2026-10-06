@@ -16,6 +16,7 @@ async function source(path) {
 const {
   mutateLatest,
   versionPath,
+  versionUrl,
   parseVersion,
   newestVersion,
   nextVersion,
@@ -27,6 +28,11 @@ const { moveWork } = await source("lib/portfolio-order.ts");
 // Version files sort and parse predictably; unrelated blobs are ignored.
 assert.equal(versionPath(42), "studio/collection/0000000042.json");
 assert.equal(parseVersion(versionPath(42)), 42);
+// Version URLs resolve from the store root, not the public copy's folder.
+assert.equal(
+  versionUrl("https://abc.public.blob.vercel-storage.com/studio/artist-state-v2.json", 7),
+  "https://abc.public.blob.vercel-storage.com/studio/collection/0000000007.json",
+);
 assert.equal(parseVersion("studio/artist-state-v2.json"), null);
 const blobs = [3, 11, 7].map((v) => ({ pathname: versionPath(v), url: "u" + v }));
 blobs.push({ pathname: "studio/collection/notes.txt", url: "x" });
@@ -110,5 +116,5 @@ await assert.rejects(
   /storage unavailable/,
 );
 console.log(
-  "PASS: version naming, newest-version selection, pruning, conflict detection, concurrent move/delete rebasing, acknowledged-save response, and storage failure handling.",
+  "PASS: version naming, version URLs, newest-version selection, pruning, conflict detection, concurrent move/delete rebasing, acknowledged-save response, and storage failure handling.",
 );
