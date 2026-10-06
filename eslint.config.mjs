@@ -8,6 +8,7 @@ export default defineConfig([
     ".next/**",
     ".next-test/**",
     ".next-check/**",
+    ".next-review/**",
     ".pnpm-store/**",
     ".feni-data/**",
     "next-env.d.ts",

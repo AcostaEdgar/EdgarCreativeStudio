@@ -1,8 +1,20 @@
-import { HomeExperience } from "@/components/experience/home-experience";
 import { readStudioState } from "@/lib/studio-state";
-export const metadata = { alternates: {canonical: "/"} };
-export const revalidate = 300;
+import { ArtistHome } from "@/components/artist-home";
+export const dynamic = "force-dynamic";
+export async function generateMetadata() {
+  const { portfolio, home } = await readStudioState();
+  const image = home.hero[0]?.url || portfolio[0]?.image;
+  return {
+    alternates: { canonical: "/" },
+    openGraph: {
+      title: "Edgar Acosta — Artist & photographer",
+      images: image
+        ? [{ url: image, alt: "Selected photograph by Edgar Acosta" }]
+        : [],
+    },
+  };
+}
 export default async function Home() {
-  const { home, portfolio } = await readStudioState();
-  return <HomeExperience slots={home} works={portfolio} />;
+  const state = await readStudioState();
+  return <ArtistHome works={state.portfolio} hero={state.home.hero} />;
 }

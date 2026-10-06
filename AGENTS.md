@@ -1,5 +1,15 @@
 # Edgar Creative Studio: Codex Rebuild Prompt
 
+## Latest direction — October 6, 2026
+
+The latest user correction supersedes the earlier editorial and immersive-room instructions below. Brand as Edgar Studio / Edgar Creative Studio, with bold original sans typography. One full-screen photograph follows a flowing loading entrance, then a dense four-column grid of 4:5 image tiles (two columns on phones). All portfolio images appear together, without category filters or public category labels. Clicking opens an uncropped full-screen viewer. Retain the optimized halftone cursor and subtle scroll depth, with reduced-motion support. No about page, artist slogans, services, or public writing section. Contact is email contact@edgaracosta.com and telephone +1 470 931 2900. Studio Login must remain clearly visible in the footer. One hero image can be selected in admin. Keep the existing password. Publishing is authorized.
+
+## Earlier direction — October 6, 2026
+
+Edgar explicitly superseded the September 28 immersive-studio direction. The site now represents Edgar Acosta as an artist and photographer: clean editorial presentation, high-quality uncropped photographs, restrained motion, warm paper typography, and an accessible image viewer. The 3D showroom, commercial agency positioning, autoplay music, and digital spectacle are no longer the public experience. Focus inquiries on signature portraits, spaces/interiors, one-of-one prints, artistic collaboration, and speaking. Use the newly supplied Desktop/Portfolio photographs; remove the older low-quality website images. Never publish camera filenames as artwork titles or invent credentials or exhibition histories.
+
+Owner editing must support reliable batch uploads, metadata editing, reordering, hero selection, replacement, and deletion. Preserve existing password/authentication environment values. The editorial collection uses studio/artist-state-v2.json in Vercel Blob, leaving the previous state document recoverable; local editing uses ignored .artist-state.json. Seed content comes from content/portfolio.json and content/home-media.json. The public site renders current storage on every request. The user authorized rebuilding and publishing this version.
+
 ## Current direction — user correction, September 28, 2026
 
 This correction supersedes conflicting visual and gallery instructions below. Preserve the original immersive homepage, scroll-driven 3D entrance, motion interlude, aligned edge-to-edge tiles with hover/touch reveals, and the full interactive circular showroom as the primary gallery experience. Adapt the established experience into Edgar's personal studio; do not replace it with a conventional portfolio layout. Keep gallery walking/navigation, artwork map, spatial/index switch, and detail views. Use Edgar's published portfolio in the tiles and showroom. The existing credited ink footage may remain as the restored motion treatment. Public account/platform features stay removed. Confirmed contact email: contact@edgaracosta.com. Future feature work must preserve this visual foundation.

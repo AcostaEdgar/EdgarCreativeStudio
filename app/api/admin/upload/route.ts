@@ -1,43 +1,85 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { sameOrigin, validSession } from "@/lib/admin";
-import fs from "node:fs/promises";
+import { authorize, publish } from "@/lib/admin-mutation";
 import path from "node:path";
 import sharp from "sharp";
-import type portfolioDefaults from "@/content/portfolio.json";
-import type homeDefaults from "@/content/home-media.json";
-
-async function save(name: string, value: unknown) { await fs.writeFile(path.join(process.cwd(), "content", name), JSON.stringify(value, null, 2) + "\n"); }
+import crypto from "node:crypto";
+import type { Work } from "@/lib/studio-types";
 export async function POST(request: Request) {
-  if (process.env.VERCEL) return NextResponse.json({ error: "Hosted uploads go directly to Blob storage." }, { status: 410 });
-  if (!sameOrigin(request)) return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
-  if (!validSession((await cookies()).get("edgar_admin")?.value)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const form = await request.formData();
-  const portfolio: typeof portfolioDefaults = JSON.parse(await fs.readFile(path.join(process.cwd(), "content/portfolio.json"), "utf8"));
-  const home: typeof homeDefaults = JSON.parse(await fs.readFile(path.join(process.cwd(), "content/home-media.json"), "utf8"));
-  const files = form.getAll("files").filter((value): value is File => value instanceof File);
-  if (!files.length) return NextResponse.json({ error: "Choose one or more images." }, { status: 400 });
-  const asHero = form.get("hero") === "true";
-  const added: Array<Record<string, unknown>> = [];
-  for (const file of files) {
-    if (!file.type.startsWith("image/")) continue;
-    const id = `${Date.now()}${Math.floor(Math.random() * 1000)}`;
-    const source = Buffer.from(await file.arrayBuffer());
-    const meta = await sharp(source).metadata();
-    const width = meta.width || 1600, height = meta.height || 1200;
-    const url = `/media/work-${id}.webp`;
-    await sharp(source).rotate().resize({ width: 2200, withoutEnlargement: true }).webp({ quality: 90 }).toFile(path.join(process.cwd(), "public", url));
-    const title = String(form.get("title") || file.name.replace(/\.[^.]+$/, "")).slice(0, 120);
-    const physicalWidth = Number(form.get("physicalWidth")) || undefined;
-    const physicalHeight = Number(form.get("physicalHeight")) || undefined;
-    const physicalDepth = Number(form.get("physicalDepth")) || undefined;
-    const unit = String(form.get("unit") || "cm");
-    const item = { id: Number(id), title, year: String(form.get("year") || new Date().getFullYear()), medium: String(form.get("medium") || "Image"), image: url, width, height, alt: String(form.get("alt") || title), description: String(form.get("description") || ""), artist: "Edgar Acosta", ...(physicalWidth ? { physicalWidth } : {}), ...(physicalHeight ? { physicalHeight } : {}), ...(physicalDepth ? { physicalDepth } : {}), unit };
-    added.push(item); (portfolio as unknown as unknown[]).push(item);
-    (home.collage as unknown as unknown[]).push({ id, kind: "image", url, width, height, alt: item.alt, caption: title });
-    if (asHero && home.hero.length < 4) home.hero.push({ id, kind: "image", url, width, height, alt: item.alt, caption: title });
+  const denied = await authorize(request);
+  if (denied) return denied;
+  if (process.env.VERCEL)
+    return NextResponse.json({ error: "Use online uploads." }, { status: 410 });
+  try {
+    const form = await request.formData();
+    const file = form.get("files");
+    if (
+      !(file instanceof File) ||
+      !["image/jpeg", "image/png", "image/webp", "image/avif"].includes(
+        file.type,
+      ) ||
+      file.size > 25 * 1024 * 1024
+    )
+      throw new Error("Choose a JPEG, PNG, WebP or AVIF image under 25 MB.");
+    const id = Date.now() * 1000 + crypto.randomInt(1000);
+    const image = "/media/work-" + id + ".webp";
+    const info = await sharp(Buffer.from(await file.arrayBuffer()))
+      .rotate()
+      .resize({
+        width: 3200,
+        height: 3200,
+        fit: "inside",
+        withoutEnlargement: true,
+      })
+      .webp({ quality: 92 })
+      .toFile(path.join(process.cwd(), "public", image));
+    const title = String(form.get("title") || "").slice(0, 120);
+    const work: Work = {
+      id,
+      title,
+      year: String(form.get("year") || ""),
+      medium: "Photography",
+      category: String(form.get("category") || "People & place"),
+      image,
+      width: info.width,
+      height: info.height,
+      alt: String(form.get("alt") || title || "Photograph by Edgar Acosta"),
+      description: String(form.get("description") || ""),
+      artist: "Edgar Acosta",
+    };
+    return publish((state) => {
+      const replaceId = Number(form.get("replaceId"));
+      if (replaceId) {
+        const index = state.portfolio.findIndex((w) => w.id === replaceId);
+        if (index < 0)
+          throw new Error("The work being replaced no longer exists.");
+        const previous = state.portfolio[index];
+        state.portfolio[index] = {
+          ...previous,
+          image,
+          width: work.width,
+          height: work.height,
+          alt: work.alt,
+        };
+        state.home.hero = state.home.hero.map((m) =>
+          m.url === previous.image
+            ? {
+                ...m,
+                url: image,
+                width: work.width,
+                height: work.height,
+                alt: work.alt,
+              }
+            : m,
+        );
+        state.home.collage = state.home.collage.filter(
+          (m) => m.url !== previous.image,
+        );
+      } else state.portfolio.push(work);
+    });
+  } catch (e) {
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : "Upload failed." },
+      { status: 400 },
+    );
   }
-  if (!added.length) return NextResponse.json({ error: "Only image files are supported." }, { status: 400 });
-  await save("portfolio.json", portfolio); await save("home-media.json", home);
-  return NextResponse.json({ added, home });
 }
